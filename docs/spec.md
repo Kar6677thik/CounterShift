@@ -423,8 +423,9 @@ CounterShift/
 ├─ tests/
 │  ├─ CounterShift.Domain.Tests/    # unit + property tests
 │  ├─ CounterShift.Storage.Tests/   # contract tests via Testcontainers, facade tests with mocks
-│  ├─ CounterShift.Api.Tests/       # WebApplicationFactory end-to-end
-│  └─ CounterShift.Experiments/     # B1/B4/B5 harnesses (not run in CI by default)
+│  └─ CounterShift.Api.Tests/       # WebApplicationFactory end-to-end
+├─ experiments/
+│  └─ CounterShift.Experiments/     # B1/B4/B5 harnesses: console app printing measurements (not a CI test)
 ├─ load/                            # k6 scripts + event generator (skewed / hot keys)
 ├─ deploy/
 │  ├─ compose/                      # local docker-compose + prometheus/grafana config
@@ -436,6 +437,7 @@ CounterShift/
    ├─ learning/                     # one note per milestone (the "journal")
    ├─ runbooks/                     # migration.md, rollback.md, deploy.md, secrets-setup.md
    ├─ glossary.md
+   ├─ results/                      # raw experiment outputs, dated, with machine specs
    └─ report.md                     # final numbers
 ```
 

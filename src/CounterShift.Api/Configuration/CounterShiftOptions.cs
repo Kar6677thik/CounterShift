@@ -16,6 +16,14 @@ public sealed class CounterShiftOptions
     public IngestionOptions Ingestion { get; set; } = new();
     public TimeSpan MaxWindow { get; set; } = TimeSpan.FromDays(7);
     public TimeSpan RetentionCleanupInterval { get; set; } = TimeSpan.FromMinutes(5);
+
+    /// <summary>
+    /// Upper bound on this process's open PostgreSQL connections. Npgsql's default (100) equals Postgres's
+    /// default max_connections (100), so one busy replica could take every connection the server has.
+    /// Keep (replicas × MaxPoolSize) well below max_connections. Extra requests wait for a free connection,
+    /// which is backpressure, instead of overwhelming the database.
+    /// </summary>
+    public int MaxPoolSize { get; set; } = 20;
     public List<CounterOptions> Counters { get; set; } = [];
     public List<RuleOptions> Rules { get; set; } = [];
 

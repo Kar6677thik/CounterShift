@@ -4,7 +4,7 @@ A fraud-counter service that answers time-windowed questions such as *"more than
 
 It is a learning-scale rebuild of Grab's Counter Service and its 2026 storage migration. See [`docs/spec.md`](docs/spec.md) for the full specification.
 
-> **Status:** Batch A (M0–M3): scaffolding, domain logic, first naive version, lost-update experiment.
+> **Status:** Batch A complete (M0–M3). Working service on PostgreSQL with atomic increments; Break experiments B1 (lost updates) and B5 (deadlocks) measured. Next: Batch B, the storage facade, Redis and the migration machinery.
 
 ## Architecture (current milestone)
 
@@ -39,7 +39,8 @@ dotnet test --solution CounterShift.slnx
 |---|---|
 | `src/CounterShift.Domain` | Pure logic: events, counters, buckets, window decomposition, rules |
 | `src/CounterShift.Api` | HTTP host, configuration, database access |
-| `tests/` | Unit, property and integration tests; `CounterShift.Experiments` holds the "Break" harnesses |
+| `tests/` | Unit, property and integration tests |
+| `experiments/` | "Break" harnesses that measure failures (lost updates, deadlocks); results in `docs/results/` |
 | `deploy/compose` | Local dependencies |
 | `docs/spec.md` | What we build and why |
 | `docs/learning/` | **Start here to learn**: one note per milestone (what, why, when, commands, self-check) |

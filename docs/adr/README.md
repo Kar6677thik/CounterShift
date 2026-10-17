@@ -11,3 +11,4 @@ Format: Michael Nygard's original ADR template, lightly extended with "Alternati
 | [0003](0003-event-time-lateness-and-skew.md) | Bucket by event time; reject events more than 5 min late or more than 30 s ahead | Accepted |
 | [0004](0004-fail-closed-decisions.md) | Decision API fails closed (503) when storage is unavailable | Accepted |
 | [0005](0005-no-dedup-in-v1.md) | No event deduplication in v1 | Accepted |
+| [0006](0006-atomic-upsert-with-sorted-keys.md) | Atomic multi-row upsert, consistent lock order, bounded connection pool | Accepted |

@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/experiments/">
+    <Project Path="experiments/CounterShift.Experiments/CounterShift.Experiments.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/CounterShift.Api/CounterShift.Api.csproj" />
     <Project Path="src/CounterShift.Domain/CounterShift.Domain.csproj" />

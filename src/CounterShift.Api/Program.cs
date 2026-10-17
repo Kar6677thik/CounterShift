@@ -39,7 +39,9 @@ builder.Services.AddSingleton(sp =>
     {
         throw new InvalidOperationException("ConnectionStrings:Postgres is not configured.");
     }
-    return NpgsqlDataSource.Create(cs);
+    var dataSource = new NpgsqlDataSourceBuilder(cs);
+    dataSource.ConnectionStringBuilder.MaxPoolSize = sp.GetRequiredService<IOptions<CounterShiftOptions>>().Value.MaxPoolSize;
+    return dataSource.Build();
 });
 builder.Services.AddSingleton<MigrationRunner>();
 builder.Services.AddSingleton<RetentionCleanupService>();
@@ -77,37 +79,31 @@ app.MapPost("/v1/events", async (
 {
     var increments = catalog.PlanIncrements(request.ToDomain(), clock.GetUtcNow(), policy);
 
+    // ADR 0006. v0 did read-modify-write here and lost 97.9% of increments under 50 concurrent writers
+    // (experiment B1). Now every bucket of the event goes through ONE statement:
+    //  • atomic: Postgres reads, adds and writes each row while holding its row lock, so concurrent
+    //    increments queue up instead of overwriting each other;
+    //  • all-or-nothing: a single statement is its own transaction, so no explicit BEGIN is needed;
+    //  • ORDER BY: every writer locks rows in the same order, so two events can't deadlock (experiment B5);
+    //  • GroupBy: ON CONFLICT can't touch the same row twice in one statement, so duplicates are merged first.
+    var merged = increments.GroupBy(i => i.Bucket).Select(g => (Bucket: g.Key, Delta: g.Sum(i => i.Delta))).ToList();
     await using var conn = await db.OpenConnectionAsync(ct);
-    await using var tx = await conn.BeginTransactionAsync(ct);
-    foreach (var increment in increments)
-    {
-        var bucket = new
+    await conn.ExecuteAsync(new CommandDefinition(
+        """
+        INSERT INTO counter_buckets (counter_key, granularity, bucket_start, count)
+        SELECT * FROM unnest(@keys, @granularities, @starts, @deltas) AS t(counter_key, granularity, bucket_start, delta)
+        ORDER BY counter_key, granularity, bucket_start
+        ON CONFLICT (counter_key, granularity, bucket_start)
+        DO UPDATE SET count = counter_buckets.count + EXCLUDED.count
+        """,
+        new
         {
-            key = increment.Bucket.Key.Value,
-            granularity = (short)increment.Bucket.Span.Granularity.Minutes,
-            start = increment.Bucket.Span.Start.UtcDateTime,
-        };
-
-        // Read the current value, add in C#, write it back. It's inside a transaction, so it must be
-        // safe... right? (M3 measures what happens under concurrency.)
-        var current = await conn.QuerySingleOrDefaultAsync<long?>(new CommandDefinition(
-            "SELECT count FROM counter_buckets WHERE counter_key = @key AND granularity = @granularity AND bucket_start = @start",
-            bucket, tx, cancellationToken: ct));
-
-        if (current is null)
-        {
-            await conn.ExecuteAsync(new CommandDefinition(
-                "INSERT INTO counter_buckets (counter_key, granularity, bucket_start, count) VALUES (@key, @granularity, @start, @count)",
-                new { bucket.key, bucket.granularity, bucket.start, count = increment.Delta }, tx, cancellationToken: ct));
-        }
-        else
-        {
-            await conn.ExecuteAsync(new CommandDefinition(
-                "UPDATE counter_buckets SET count = @count WHERE counter_key = @key AND granularity = @granularity AND bucket_start = @start",
-                new { bucket.key, bucket.granularity, bucket.start, count = current.Value + increment.Delta }, tx, cancellationToken: ct));
-        }
-    }
-    await tx.CommitAsync(ct);
+            keys = merged.Select(m => m.Bucket.Key.Value).ToArray(),
+            granularities = merged.Select(m => (short)m.Bucket.Span.Granularity.Minutes).ToArray(),
+            starts = merged.Select(m => m.Bucket.Span.Start.UtcDateTime).ToArray(),
+            deltas = merged.Select(m => m.Delta).ToArray(),
+        },
+        cancellationToken: ct));
 
     // 200, not 202: the counts are committed by the time we answer. 202 would promise "accepted, done later".
     return Results.Ok(new EventAccepted([.. increments.Select(i => i.Bucket.Key.Value).Distinct()]));
