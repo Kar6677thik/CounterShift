@@ -2,7 +2,7 @@
 
 - **Date:** 2026-10-17
 - **Command:** `dotnet run -c Release --project experiments/CounterShift.Experiments -- deadlocks --writers 10 --statements 30 --rows 10`
-- **Machine:** development laptop, 14 logical CPUs, Windows 11 (10.0.26100), .NET 10.0.12, PostgreSQL 17 in Docker Desktop (WSL2).
+- **Machine:** Intel Core Ultra 5 225H (14 logical CPUs), Windows 11, Docker Desktop on WSL2, .NET 10.0.12, PostgreSQL 17 in a container.
 
 ## 10 writers × 30 multi-row upserts, each touching the same 10 rows
 

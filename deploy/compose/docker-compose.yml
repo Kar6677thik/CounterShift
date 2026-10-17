@@ -1,5 +1,7 @@
-# Local development dependencies. Start with:
-#   docker compose -f deploy/compose/docker-compose.yml up -d
+# The full local stack. Start with:
+#   docker compose -f deploy/compose/docker-compose.yml up -d --build      # API on http://localhost:8080
+# For development, start only the dependencies and run the API from source:
+#   docker compose -f deploy/compose/docker-compose.yml up -d postgres redis prometheus grafana
 # Prometheus http://localhost:59090 · Grafana http://localhost:53000 (dashboard "CounterShift: migration")
 name: countershift
 
@@ -35,6 +37,31 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+  api:
+    build:
+      context: ../..
+      dockerfile: src/CounterShift.Api/Dockerfile
+    image: countershift-api:local
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      # No Kerberos here: without this, Npgsql probes for libgssapi (absent from the slim runtime image) and logs an error.
+      ConnectionStrings__Postgres: Host=postgres;Database=countershift;Username=countershift;Password=countershift;GSS Encryption Mode=Disable
+      ConnectionStrings__Redis: redis:6379
+      # The storage mode is a watched file: edit deploy/compose/mode/storage-mode.json and the running API switches.
+      COUNTERSHIFT_STORAGE_MODE_FILE: /config/storage-mode.json
+      # File-change events don't cross a Windows/macOS bind mount into the container; poll instead.
+      DOTNET_USE_POLLING_FILE_WATCHER: "true"
+      OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: http://prometheus:9090/api/v1/otlp/v1/metrics
+    volumes:
+      # A directory, not a single file: editors replace files on save, and a single-file bind mount keeps
+      # pointing at the old copy. (Kubernetes ConfigMaps have the same trap with subPath.)
+      - ./mode:/config:ro
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
 
   prometheus:
     image: prom/prometheus:v3.15.0

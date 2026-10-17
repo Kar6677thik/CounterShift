@@ -1,7 +1,7 @@
 # M8: local migration rehearsal under load (clean run 20261017T121317Z)
 
 Command: `python load/rehearse.py --mode-file <file>` (defaults: 30 s steps, 200 events/s + 400 decisions/s).
-Development laptop; everything (API, PostgreSQL, Redis, Prometheus, k6) shares one machine. The server run (M10) is the one to quote.
+Machine: Intel Core Ultra 5 225H (14 logical CPUs), Windows 11, Docker Desktop on WSL2. Everything (API, PostgreSQL, Redis, Prometheus and k6) shares this one machine.
 
 - Machine: Windows-11-10.0.26100-SP0, 14 logical CPUs (API, PostgreSQL, Redis, Prometheus and k6 all on this one machine)
 - Load: 200 events/s + 400 decisions/s, open model (k6 constant arrival rate), 30% of traffic on 1% of cards
@@ -89,5 +89,5 @@ Notes: Prometheus `increase()` over a step window is approximate (samples every 
 - **The P3 split 70% spike** (PostgreSQL write p99 193 ms, read 75 ms) was confined to PostgreSQL: 234 of 6,002 writes in that window took over 50 ms, versus 0 in the windows either side. Redis reads in the same window stayed at about 2 ms.
   - **Not GC:** .NET GC pause time was 0.16–0.21 s in every window.
   - **A PostgreSQL checkpoint was in progress** (12:17:50–12:22:20), but it also spans windows without a spike.
-  - Autovacuum isn't logged by default. **Unattributed.** The server run sets `log_autovacuum_min_duration = 0` to attribute it.
-- **Redis p99 of "2.0 ms"** sits on a histogram bucket edge (2 ms), so the true value lies between 1 and 2 ms. Bucket resolution limits what Prometheus can tell us (learning note 07).
+  - Autovacuum isn't logged by default. **Unattributed.** Setting `log_autovacuum_min_duration = 0` would let a repeat run attribute it.
+- **Redis p99 of "2.0 ms"** sits on a histogram bucket edge (2 ms), so the true value lies between 1 and 2 ms. Bucket resolution limits what a histogram-based percentile can resolve.

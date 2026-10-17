@@ -1,0 +1,8 @@
+{
+  "CounterShift": {
+    "Storage": {
+      "Write": { "Mode": "Single", "Primary": "postgres" },
+      "Read": { "Mode": "Single", "Primary": "postgres" }
+    }
+  }
+}
