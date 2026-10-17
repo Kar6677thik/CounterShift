@@ -17,3 +17,4 @@ One note per milestone, written when the milestone is finished. Read them in ord
 | [02](02-v0-scattered.md) | v0-scattered: the honest first version (tag `v0-scattered`) | A |
 | [03](03-lost-updates-and-atomic-increments.md) | Break B1/B5: lost updates and deadlocks → atomic upsert | A |
 | [04](04-branch-by-abstraction.md) | Break B2 + branch by abstraction: storage behind a seam | B |
+| [05](05-redis-backend.md) | The new backend: Redis hashes, Lua, native expiry; why a naive switch is dangerous | B |

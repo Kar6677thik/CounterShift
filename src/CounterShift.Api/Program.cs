@@ -11,6 +11,7 @@ using CounterShift.Domain.Rules;
 using CounterShift.Domain.Time;
 using CounterShift.Storage;
 using CounterShift.Storage.Postgres;
+using CounterShift.Storage.Redis;
 using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -27,6 +28,11 @@ builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<CounterShiftO
 // The ONLY place in the API that names a concrete backend. Everything below talks to CounterStore.
 builder.Services.AddOptions<PostgresOptions>().Bind(builder.Configuration.GetSection(PostgresOptions.SectionName));
 builder.Services.AddPostgresCounterBackend(sp => sp.GetRequiredService<IConfiguration>().GetConnectionString("Postgres"));
+if (!string.IsNullOrWhiteSpace(builder.Configuration.GetConnectionString("Redis")))
+{
+    builder.Services.AddRedisCounterBackend(sp => sp.GetRequiredService<IConfiguration>().GetConnectionString("Redis"));
+}
+builder.Services.AddOptions<StorageOptions>().Bind(builder.Configuration.GetSection(StorageOptions.SectionName));
 builder.Services.AddSingleton<CounterStore>();
 
 builder.Services.AddProblemDetails();

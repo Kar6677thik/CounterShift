@@ -1,6 +1,6 @@
 # Local development dependencies. Start with:
 #   docker compose -f deploy/compose/docker-compose.yml up -d
-# Redis, Prometheus and Grafana join this file in later milestones (M5, M7).
+# Prometheus and Grafana join this file in M7.
 name: countershift
 
 services:
@@ -21,5 +21,21 @@ services:
       timeout: 3s
       retries: 10
 
+  redis:
+    image: redis:8-alpine
+    # Append-only file, fsync once per second: at most ~1 s of increments can be lost if the machine
+    # crashes. The same setting is used in production (ADR 0008).
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec"]
+    ports:
+      - "56379:6379"   # non-default host port, as with Postgres
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
 volumes:
   pgdata:
+  redisdata:

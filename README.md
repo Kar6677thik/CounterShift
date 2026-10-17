@@ -25,7 +25,7 @@ The target architecture after the migration machinery (M6) is described in spec 
 Prerequisites: .NET SDK 10.0.4xx and Docker.
 
 ```bash
-# 1. Start PostgreSQL locally (host port 55432)
+# 1. Start PostgreSQL (host port 55432) and Redis (host port 56379)
 docker compose -f deploy/compose/docker-compose.yml up -d
 
 # 2. Run the API (applies database migrations on startup)
@@ -43,6 +43,7 @@ dotnet test --solution CounterShift.slnx
 | `src/CounterShift.Api` | HTTP host, configuration, composition root |
 | `src/CounterShift.Storage` | Storage seam: `ICounterBackend`, `CounterStore` facade, in-memory backend |
 | `src/CounterShift.Storage.Postgres` | Legacy backend: SQL, migrations, retention cleanup |
+| `src/CounterShift.Storage.Redis` | New backend: one hash per counter and tier, Lua writes, native expiry |
 | `tests/` | Unit, property and integration tests |
 | `experiments/` | "Break" harnesses that measure failures (lost updates, deadlocks); results in `docs/results/` |
 | `deploy/compose` | Local dependencies |

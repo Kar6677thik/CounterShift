@@ -4,6 +4,7 @@
     <ProjectReference Include="..\CounterShift.Storage\CounterShift.Storage.csproj" />
     <!-- Referenced only so the composition root (Program.cs) can register it. No API code uses its types. -->
     <ProjectReference Include="..\CounterShift.Storage.Postgres\CounterShift.Storage.Postgres.csproj" />
+    <ProjectReference Include="..\CounterShift.Storage.Redis\CounterShift.Storage.Redis.csproj" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="CounterShift.Api.Tests" />

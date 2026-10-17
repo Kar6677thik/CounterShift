@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- New backend (spec §6.2): Redis, one hash per (counter key, tier). -->
+  <ItemGroup>
+    <ProjectReference Include="..\CounterShift.Storage\CounterShift.Storage.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="StackExchange.Redis" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="CounterShift.Storage.Tests" />
+  </ItemGroup>
+</Project>

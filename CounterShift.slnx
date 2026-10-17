@@ -6,6 +6,7 @@
     <Project Path="src/CounterShift.Api/CounterShift.Api.csproj" />
     <Project Path="src/CounterShift.Domain/CounterShift.Domain.csproj" />
     <Project Path="src/CounterShift.Storage.Postgres/CounterShift.Storage.Postgres.csproj" />
+    <Project Path="src/CounterShift.Storage.Redis/CounterShift.Storage.Redis.csproj" />
     <Project Path="src/CounterShift.Storage/CounterShift.Storage.csproj" />
   </Folder>
   <Folder Name="/tests/">

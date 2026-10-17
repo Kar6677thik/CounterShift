@@ -10,7 +10,11 @@ namespace CounterShift.Storage.Tests;
 /// </summary>
 public abstract class CounterBackendContract
 {
-    protected static readonly DateTimeOffset Noon = new(2026, 10, 17, 12, 0, 0, TimeSpan.Zero);
+    /// <summary>
+    /// Real "now", aligned to the hour. Real time rather than a fixed date, because Redis expires fields by its
+    /// own clock: a test bucket older than its tier's retention would (correctly) vanish straight away.
+    /// </summary>
+    protected static readonly DateTimeOffset Anchor = Granularity.OneHour.AlignDown(DateTimeOffset.UtcNow);
 
     protected static CancellationToken Ct => TestContext.Current.CancellationToken;
 
@@ -24,7 +28,7 @@ public abstract class CounterBackendContract
     protected static BucketRef Bucket(string? key = null, Granularity? tier = null, int minuteOffset = 0)
     {
         var granularity = tier ?? Granularity.OneMinute;
-        var start = granularity.AlignDown(Noon.AddMinutes(minuteOffset));
+        var start = granularity.AlignDown(Anchor.AddMinutes(minuteOffset));
         return new BucketRef(CounterKey.For("contract", key ?? Guid.NewGuid().ToString("N")), new BucketSpan(granularity, start));
     }
 
@@ -94,7 +98,8 @@ public abstract class CounterBackendContract
     public async Task Many_buckets_can_be_read_in_one_call()
     {
         var key = Guid.NewGuid().ToString("N");
-        var buckets = Enumerable.Range(0, 500).Select(i => Bucket(key, Granularity.OneMinute, -i)).ToList();
+        // 500 quarter-hours ≈ 5.2 days back: inside the 15m tier's 8-day retention.
+        var buckets = Enumerable.Range(0, 500).Select(i => Bucket(key, Granularity.FifteenMinutes, -15 * i)).ToList();
         await Backend.IncrementAsync([.. buckets.Select((b, i) => Inc(b, i + 1))], Ct);
 
         var read = await Backend.ReadAsync(buckets, Ct);
