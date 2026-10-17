@@ -14,3 +14,4 @@ One note per milestone, written when the milestone is finished. Read them in ord
 |---|---|---|
 | [00](00-scaffolding.md) | Scaffolding, build discipline, CI | A |
 | [01](01-domain-bucketing-and-rules.md) | Domain: bucketing, decomposition, rules, property tests | A |
+| [02](02-v0-scattered.md) | v0-scattered: the honest first version (tag `v0-scattered`) | A |

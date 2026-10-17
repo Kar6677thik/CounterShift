@@ -183,7 +183,7 @@ HTTP clients retry, and a retried event would be counted twice. We **do not dedu
 
 | Method and path | Purpose | Success |
 |---|---|---|
-| `POST /v1/events` | Ingest one event | `202` with `{ counterKeysUpdated: [...] }` |
+| `POST /v1/events` | Ingest one event | `200` with `{ counterKeysUpdated: [...] }` (counts are committed before the reply; `202` would promise later processing) |
 | `POST /v1/decisions` | Evaluate rules for an action | `200` (see below) |
 | `GET /v1/counters/{counter}/{entity}?window=PT90M` | Debugging and teaching: count plus the buckets used | `200` |
 | `GET /healthz` | Liveness: the process is up | `200` |

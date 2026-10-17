@@ -1,16 +1,17 @@
 using System.Net;
-using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace CounterShift.Api.Tests;
 
-public sealed class HealthTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
+public sealed class HealthTests(ApiFixture api)
 {
-    [Fact]
-    public async Task Healthz_returns_200()
+    [Theory]
+    [InlineData("/healthz")]
+    [InlineData("/readyz")]
+    public async Task Health_endpoints_return_200(string path)
     {
-        using var client = factory.CreateClient();
+        using var client = api.CreateClient();
 
-        var response = await client.GetAsync(new Uri("/healthz", UriKind.Relative), TestContext.Current.CancellationToken);
+        var response = await client.GetAsync(new Uri(path, UriKind.Relative), TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }

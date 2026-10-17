@@ -7,7 +7,11 @@
     <PackageReference Include="Dapper" />
   </ItemGroup>
   <ItemGroup>
-    <!-- Lets the test project use WebApplicationFactory<Program>. -->
+    <!-- Migrations ship inside the DLL, so the container image can't be missing one. An explicit
+         LogicalName keeps resource names predictable (MSBuild mangles names that start with digits). -->
+    <EmbeddedResource Include="Database\Migrations\*.sql" LogicalName="CounterShift.Api.Database.Migrations.%(Filename)%(Extension)" />
+  </ItemGroup>
+  <ItemGroup>
     <InternalsVisibleTo Include="CounterShift.Api.Tests" />
   </ItemGroup>
 </Project>

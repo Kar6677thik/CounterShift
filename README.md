@@ -27,7 +27,7 @@ Prerequisites: .NET SDK 10.0.4xx and Docker.
 docker compose -f deploy/compose/docker-compose.yml up -d
 
 # 2. Run the API (applies database migrations on startup)
-dotnet run --project src/CounterShift.Api
+ASPNETCORE_ENVIRONMENT=Development dotnet run --project src/CounterShift.Api --no-launch-profile --urls http://localhost:5072
 
 # 3. Run all tests (integration tests start their own throwaway Postgres via Testcontainers)
 dotnet test --solution CounterShift.slnx
