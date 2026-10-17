@@ -1,6 +1,6 @@
 using System.Globalization;
 using CounterShift.Domain.Counters;
-using CounterShift.Domain.Time;
+using CounterShift.Storage.Migration;
 using StackExchange.Redis;
 
 namespace CounterShift.Storage.Redis;
@@ -17,7 +17,7 @@ namespace CounterShift.Storage.Redis;
 ///   1760703300 → 1      (bucket 12:15Z)
 /// </code>
 /// </example>
-public sealed class RedisCounterBackend(IConnectionMultiplexer redis, string keyPrefix = "cs") : ICounterBackend
+public sealed class RedisCounterBackend(IConnectionMultiplexer redis, string keyPrefix = "cs") : ICounterBackend, IBucketWriter
 {
     public const string BackendName = "redis";
 
@@ -37,6 +37,19 @@ public sealed class RedisCounterBackend(IConnectionMultiplexer redis, string key
         return #KEYS
         """;
 
+    // Backfill variant: HSET (overwrite) instead of HINCRBY, so copying the same bucket twice is harmless.
+    private const string SetScript =
+        """
+        for i = 1, #KEYS do
+          local base = (i - 1) * 4
+          local field = ARGV[base + 1]
+          redis.call('HSET', KEYS[i], field, ARGV[base + 2])
+          redis.call('HPEXPIREAT', KEYS[i], ARGV[base + 3], 'FIELDS', 1, field)
+          redis.call('EXPIRE', KEYS[i], ARGV[base + 4])
+        end
+        return #KEYS
+        """;
+
     // Margin on the key-level TTL so it never fires before its newest field's own expiry.
     private static readonly TimeSpan KeyTtlSlack = TimeSpan.FromHours(1);
 
@@ -45,27 +58,35 @@ public sealed class RedisCounterBackend(IConnectionMultiplexer redis, string key
     public Task IncrementAsync(IReadOnlyList<BucketIncrement> increments, CancellationToken ct) => Translate(async () =>
     {
         var merged = BucketIncrements.Merge(increments);
-        if (merged.Count == 0)
+        await RunScriptAsync(IncrementScript, [.. merged.Select(m => (m.Bucket, m.Delta))], ct);
+    });
+
+    public Task SetAsync(IReadOnlyList<BucketValue> values, CancellationToken ct) => Translate(() =>
+        RunScriptAsync(SetScript, [.. values.Select(v => (v.Bucket, v.Count))], ct));
+
+    private async Task RunScriptAsync(string script, IReadOnlyList<(BucketRef Bucket, long Value)> items, CancellationToken ct)
+    {
+        if (items.Count == 0)
         {
             return;
         }
-        var keys = new RedisKey[merged.Count];
-        var args = new RedisValue[merged.Count * 4];
-        for (var i = 0; i < merged.Count; i++)
+        var keys = new RedisKey[items.Count];
+        var args = new RedisValue[items.Count * 4];
+        for (var i = 0; i < items.Count; i++)
         {
-            var (bucket, delta) = (merged[i].Bucket, merged[i].Delta);
+            var (bucket, value) = items[i];
             var tier = bucket.Span.Granularity;
             keys[i] = KeyFor(bucket);
             args[i * 4] = FieldFor(bucket);
-            args[(i * 4) + 1] = delta;
+            args[(i * 4) + 1] = value;
             // Same rule as the Postgres cleanup (ADR 0002): a bucket may go once it ENDS before now − retention.
             // A bucket that is already past that point is deleted by Redis as soon as its expiry is set. That
             // matches the contract: ingestion never writes that far back (ADR 0003), and neither does backfill.
             args[(i * 4) + 2] = (bucket.Span.End + tier.Retention).ToUnixTimeMilliseconds();
             args[(i * 4) + 3] = (long)(tier.Width + tier.Retention + KeyTtlSlack).TotalSeconds;
         }
-        await redis.GetDatabase().ScriptEvaluateAsync(IncrementScript, keys, args).WaitAsync(ct);
-    });
+        await redis.GetDatabase().ScriptEvaluateAsync(script, keys, args).WaitAsync(ct);
+    }
 
     public Task<IReadOnlyDictionary<BucketRef, long>> ReadAsync(IReadOnlyCollection<BucketRef> buckets, CancellationToken ct) => Translate(async () =>
     {

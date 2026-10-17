@@ -14,3 +14,8 @@ Format: Michael Nygard's original ADR template, lightly extended with "Alternati
 | [0006](0006-atomic-upsert-with-sorted-keys.md) | Atomic multi-row upsert, consistent lock order, bounded connection pool | Accepted |
 | [0007](0007-storage-seam.md) | Storage seam: `ICounterBackend` behind a `CounterStore` facade, with error translation | Accepted |
 | [0008](0008-redis-hash-backend.md) | New backend: one Redis hash per (counter, tier), Lua writes, native field expiry | Accepted |
+| [0009](0009-dual-write-semantics.md) | Dual writes: primary required, secondary synchronous and tolerated, every key | Accepted |
+| [0010](0010-rollout-hashing.md) | Rollout membership: XxHash64(counter key) mod 10,000 | Accepted |
+| [0011](0011-parity-classification.md) | Shadow parity per bucket: match / mismatch / race / error; gate on closed buckets | Accepted |
+| [0012](0012-backfill-final-pre-t0-buckets.md) | Backfill final, pre-T0, unexpired buckets with SET; re-runnable (corrects spec §8) | Accepted |
+| [0013](0013-runtime-mode-reload.md) | Storage mode from a watched file; validated on reload; last good mode kept | Accepted |

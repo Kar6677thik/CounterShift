@@ -15,7 +15,7 @@ public sealed class NaiveSwitchTests(ApiFixture api)
         var user = Unique("user");
 
         // Day 1 on Postgres: a card racks up six failed payments, so the next payment is blocked.
-        await using (var onPostgres = api.WithSettings(("CounterShift:Storage:Backend", "postgres")))
+        await using (var onPostgres = api.WithSettings())
         {
             using var client = onPostgres.CreateClient();
             await client.PostEventsAsync(6, "payment.failed", new { cardId = card, userId = user });
@@ -23,7 +23,10 @@ public sealed class NaiveSwitchTests(ApiFixture api)
         }
 
         // "Just switch to Redis": a config-only change, no errors, 200 OK everywhere...
-        await using var onRedis = api.WithSettings(("CounterShift:Storage:Backend", "redis"));
+        // Since M6 the mode validator refuses to read from a store that isn't written to, so this test has to
+        // force the naive switch by pointing writes there too. Before M6 it was a single setting.
+        await using var onRedis = api.WithSettings(
+            ("CounterShift:Storage:Write:Primary", "redis"), ("CounterShift:Storage:Read:Primary", "redis"));
         using var switched = onRedis.CreateClient();
         var decision = await switched.DecideAsync("payment", new { cardId = card, userId = user });
 

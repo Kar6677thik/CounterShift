@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using CounterShift.Domain.Counters;
+using CounterShift.Storage.Migration;
 
 namespace CounterShift.Storage;
 
@@ -7,7 +9,7 @@ namespace CounterShift.Storage;
 /// The "Mock" backend from the spec: a thread-safe dictionary. It's used in unit tests, and as a
 /// deliberately divergent second backend to prove that the parity checker catches real differences.
 /// </summary>
-public sealed class InMemoryCounterBackend(string name = "memory") : ICounterBackend
+public sealed class InMemoryCounterBackend(string name = "memory") : ICounterBackend, IBucketScanner, IBucketWriter
 {
     private readonly ConcurrentDictionary<BucketRef, long> _counts = new();
 
@@ -45,6 +47,26 @@ public sealed class InMemoryCounterBackend(string name = "memory") : ICounterBac
 
     public Task<StorageStats> GetStatsAsync(CancellationToken ct) =>
         Task.FromResult(new StorageStats(Name, Bytes: 0, Records: _counts.Count));
+
+    public async IAsyncEnumerable<IReadOnlyList<BucketValue>> ScanAsync(int batchSize, [EnumeratorCancellation] CancellationToken ct)
+    {
+        ThrowIfUnavailable();
+        foreach (var chunk in _counts.OrderBy(kv => kv.Key).Select(kv => new BucketValue(kv.Key, kv.Value)).Chunk(batchSize))
+        {
+            await Task.Yield();
+            yield return chunk;
+        }
+    }
+
+    public Task SetAsync(IReadOnlyList<BucketValue> values, CancellationToken ct)
+    {
+        ThrowIfUnavailable();
+        foreach (var value in values)
+        {
+            _counts[value.Bucket] = value.Count;
+        }
+        return Task.CompletedTask;
+    }
 
     /// <summary>Test hook: overwrite a bucket, for example to simulate divergence between two stores.</summary>
     public void Set(BucketRef bucket, long count) => _counts[bucket] = count;

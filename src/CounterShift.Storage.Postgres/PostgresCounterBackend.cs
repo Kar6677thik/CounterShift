@@ -1,5 +1,7 @@
+using System.Runtime.CompilerServices;
 using CounterShift.Domain.Counters;
 using CounterShift.Domain.Time;
+using CounterShift.Storage.Migration;
 using Dapper;
 using Npgsql;
 
@@ -9,7 +11,7 @@ namespace CounterShift.Storage.Postgres;
 /// Legacy backend: one row per (counter key, granularity, bucket start). This is an Adapter: it
 /// translates the storage contract into SQL, and Npgsql's failures into <see cref="StorageUnavailableException"/>.
 /// </summary>
-public sealed class PostgresCounterBackend(NpgsqlDataSource dataSource) : ICounterBackend
+public sealed class PostgresCounterBackend(NpgsqlDataSource dataSource) : ICounterBackend, IBucketScanner
 {
     public const string BackendName = "postgres";
 
@@ -90,6 +92,42 @@ public sealed class PostgresCounterBackend(NpgsqlDataSource dataSource) : ICount
             cancellationToken: ct));
         return new StorageStats(Name, bytes, rows);
     });
+
+    /// <summary>
+    /// Every bucket in primary-key order, using <i>keyset</i> pagination: each page continues "after the last
+    /// row seen" via a row comparison the primary-key index can answer directly. OFFSET pagination would
+    /// rescan every earlier row on each page, so it gets slower the further it goes (Field Guide §10.11).
+    /// </summary>
+    public async IAsyncEnumerable<IReadOnlyList<BucketValue>> ScanAsync(int batchSize, [EnumeratorCancellation] CancellationToken ct)
+    {
+        (string Key, short Granularity, DateTime Start)? after = null;
+        while (true)
+        {
+            var page = await Translate(async () =>
+            {
+                await using var conn = await dataSource.OpenConnectionAsync(ct);
+                return (await conn.QueryAsync<(string Key, short Granularity, DateTime Start, long Count)>(new CommandDefinition(
+                    after is null
+                        ? "SELECT counter_key, granularity, bucket_start, count FROM counter_buckets ORDER BY counter_key, granularity, bucket_start LIMIT @batchSize"
+                        : """
+                          SELECT counter_key, granularity, bucket_start, count FROM counter_buckets
+                          WHERE (counter_key, granularity, bucket_start) > (@key, @granularity, @start)
+                          ORDER BY counter_key, granularity, bucket_start LIMIT @batchSize
+                          """,
+                    new { batchSize, key = after?.Key, granularity = after?.Granularity, start = after?.Start },
+                    cancellationToken: ct))).ToList();
+            });
+            if (page.Count == 0)
+            {
+                yield break;
+            }
+            yield return [.. page.Select(r => new BucketValue(
+                new BucketRef(CounterKey.Parse(r.Key), new BucketSpan(Granularity.FromMinutes(r.Granularity), new DateTimeOffset(r.Start, TimeSpan.Zero))),
+                r.Count))];
+            var last = page[^1];
+            after = (last.Key, last.Granularity, last.Start);
+        }
+    }
 
     // Only *transient* failures (can't connect, connection dropped, pool exhausted, timeout) mean "unavailable".
     // A non-transient PostgresException, such as a constraint violation, is a bug and should surface as a 500.

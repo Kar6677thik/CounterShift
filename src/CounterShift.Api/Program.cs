@@ -10,11 +10,17 @@ using CounterShift.Domain.Events;
 using CounterShift.Domain.Rules;
 using CounterShift.Domain.Time;
 using CounterShift.Storage;
+using CounterShift.Storage.Migration;
 using CounterShift.Storage.Postgres;
 using CounterShift.Storage.Redis;
 using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// The storage mode lives in its own file, watched for changes, so a cutover or rollback is a config edit and
+// never a restart or redeploy (spec §7.3). In Kubernetes this file comes from a ConfigMap (M9).
+builder.Configuration.AddJsonFile(
+    Environment.GetEnvironmentVariable("COUNTERSHIFT_STORAGE_MODE_FILE") ?? "storage-mode.json", optional: true, reloadOnChange: true);
 
 builder.Services.AddOptions<CounterShiftOptions>().Bind(builder.Configuration.GetSection(CounterShiftOptions.SectionName));
 builder.Services.AddSingleton(TimeProvider.System);
@@ -32,8 +38,8 @@ if (!string.IsNullOrWhiteSpace(builder.Configuration.GetConnectionString("Redis"
 {
     builder.Services.AddRedisCounterBackend(sp => sp.GetRequiredService<IConfiguration>().GetConnectionString("Redis"));
 }
-builder.Services.AddOptions<StorageOptions>().Bind(builder.Configuration.GetSection(StorageOptions.SectionName));
-builder.Services.AddSingleton<CounterStore>();
+builder.Services.AddOptions<StorageModeOptions>().Bind(builder.Configuration.GetSection(StorageModeOptions.SectionName));
+builder.Services.AddCounterStore();
 
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ProblemExceptionHandler>();
@@ -45,11 +51,19 @@ var app = builder.Build();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 
-// Resolve the domain singletons now, so a bad config fails at startup rather than on the first request.
+// Resolve the domain singletons and the storage mode now, so a bad config fails at startup rather than on the
+// first request.
 app.Services.GetRequiredService<RuleBook>();
+app.Services.GetRequiredService<StorageModeProvider>();
 foreach (var initializer in app.Services.GetServices<IStorageInitializer>())
 {
     await initializer.InitializeAsync(CancellationToken.None); // e.g. schema migrations
+}
+
+// One binary, two jobs: `CounterShift.Api backfill ...` runs the migration backfill and exits (ADR 0012).
+if (args is ["backfill", ..])
+{
+    return await BackfillCommand.RunAsync(app.Services, args);
 }
 
 // Liveness: is the process alive? It deliberately checks nothing else (spec §5).
@@ -60,6 +74,22 @@ app.MapGet("/readyz", async (CounterStore store, CancellationToken ct) =>
 {
     await store.CheckReadyAsync(ct);
     return Results.Ok(new { status = "ready" });
+});
+
+// What is the storage layer doing right now? Read-only, so you can watch a cutover happen.
+app.MapGet("/admin/storage-mode", (CounterStore store) =>
+{
+    var active = store.ActiveMode;
+    var parity = store.Parity;
+    return Results.Ok(new
+    {
+        write = new { mode = active.Mode.Write.Kind, primary = active.Mode.Write.Primary, secondary = active.Mode.Write.Secondary },
+        read = new { mode = active.Mode.Read.Kind, primary = active.Mode.Read.Primary, secondary = active.Mode.Read.Secondary, percent = active.Mode.Read.Percent },
+        summary = active.Mode.ToString(),
+        active.LoadedAt,
+        active.Version,
+        parity = new { parity.Match, parity.Mismatch, parity.Race, parity.Error, parity.Dropped, parity.MismatchRate, parity.LastMismatch },
+    });
 });
 
 // ── Ingest one event ─────────────────────────────────────────────────────────────────────────────
@@ -122,6 +152,7 @@ app.MapGet("/v1/counters/{counter}/{entity}", async (
 });
 
 app.Run();
+return 0;
 
 // Exposes the compiler-generated Program class to WebApplicationFactory in tests.
 public partial class Program;
