@@ -13,3 +13,4 @@ One note per milestone, written when the milestone is finished. Read them in ord
 | # | Milestone | Batch |
 |---|---|---|
 | [00](00-scaffolding.md) | Scaffolding, build discipline, CI | A |
+| [01](01-domain-bucketing-and-rules.md) | Domain: bucketing, decomposition, rules, property tests | A |

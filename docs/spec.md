@@ -125,6 +125,8 @@ Counter key format: `{counterName}:{entityValue}`, for example `payment_failed_b
 
 ### 4.4 Window decomposition (the core algorithm)
 
+> **Refined by [ADR 0002](adr/0002-granularities-and-rounding.md):** the start edge rounds to the finest tier *still retained at that age* (1m only within 3 h, otherwise 15m), and buckets may extend past `now`, so the greedy step takes the coarsest tier aligned at the cursor. ADR 0002 is authoritative where it differs from the steps below.
+
 Given a window `[start, end)` and the configured granularities from coarse to fine, cover the range with the **fewest buckets**:
 
 1. Round `start` *down* to the finest granularity (outward rounding, as in §4.3).

@@ -7,3 +7,5 @@ Format: Michael Nygard's original ADR template, lightly extended with "Alternati
 | # | Title | Status |
 |---|---|---|
 | [0001](0001-stack-dotnet-postgres-dapper.md) | .NET 10, PostgreSQL, Npgsql + Dapper, hand-rolled migrations | Accepted |
+| [0002](0002-granularities-and-rounding.md) | Four tiers, retention-aware start rounding, buckets may extend past now | Accepted |
+| [0003](0003-event-time-lateness-and-skew.md) | Bucket by event time; reject events more than 5 min late or more than 30 s ahead | Accepted |
