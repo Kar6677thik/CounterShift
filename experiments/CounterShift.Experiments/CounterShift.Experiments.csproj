@@ -7,5 +7,6 @@
     <PackageReference Include="Npgsql" />
     <PackageReference Include="Dapper" />
     <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="System.IO.Hashing" />
   </ItemGroup>
 </Project>

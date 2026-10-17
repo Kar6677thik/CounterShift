@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The storage abstraction and the migration machinery (facade, modes, parity, split).
+       It must never reference a database driver: an architecture test enforces that. -->
+  <ItemGroup>
+    <ProjectReference Include="..\CounterShift.Domain\CounterShift.Domain.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="System.IO.Hashing" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="CounterShift.Storage.Tests" />
+  </ItemGroup>
+</Project>

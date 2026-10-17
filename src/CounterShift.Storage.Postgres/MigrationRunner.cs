@@ -2,12 +2,13 @@ using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using Dapper;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 
-namespace CounterShift.Api.Database;
+namespace CounterShift.Storage.Postgres;
 
 /// <summary>
-/// Applies the versioned SQL files in Database/Migrations, in order, exactly once each (ADR 0001).
+/// Applies the versioned SQL files in Migrations/, in order, exactly once each (ADR 0001).
 /// This is what tools like Flyway, DbUp and EF migrations do underneath:
 /// <list type="bullet">
 /// <item>a <c>schema_migrations</c> table records what has run;</item>
@@ -16,12 +17,14 @@ namespace CounterShift.Api.Database;
 /// <item>a Postgres advisory lock means that when two pods start at once, one migrates and the other waits.</item>
 /// </list>
 /// </summary>
-public sealed partial class MigrationRunner(NpgsqlDataSource dataSource, ILogger<MigrationRunner> logger)
+public sealed partial class MigrationRunner(NpgsqlDataSource dataSource, ILogger<MigrationRunner> logger) : IStorageInitializer
 {
+    public Task InitializeAsync(CancellationToken ct) => ApplyAsync(ct);
+
     // An arbitrary constant that identifies "the CounterShift migration lock" across all sessions.
     private const long AdvisoryLockKey = 0x436F756E74; // "Count" in ASCII
 
-    private const string ResourcePrefix = "CounterShift.Api.Database.Migrations.";
+    private const string ResourcePrefix = "CounterShift.Storage.Postgres.Migrations.";
 
     public async Task ApplyAsync(CancellationToken ct = default)
     {

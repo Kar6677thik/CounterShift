@@ -275,6 +275,8 @@ One shared test suite (`CounterBackendContract`) runs against **every** backend.
 
 ### 7.1 Two independent knobs
 
+> Implemented in M6. Details and refinements: ADRs [0009](adr/0009-dual-write-semantics.md)–[0013](adr/0013-runtime-mode-reload.md). Backend names are `postgres` (Legacy) and `redis` (New). Metric names follow OpenTelemetry style (`cs.storage.operation.duration`, exported to Prometheus as `cs_storage_operation_duration_seconds`).
+
 Grab describes *read* modes. We add an explicit **write mode** too, because that is where data consistency is decided:
 
 | Knob | Values |
@@ -337,6 +339,8 @@ Every storage call records `cs_storage_op_duration_seconds{backend, op=read|writ
 ---
 
 ## 8. Backfill (filling the new store with history)
+
+> **Corrected by [ADR 0012](adr/0012-backfill-final-pre-t0-buckets.md).** The rule below misses buckets that *straddle* T0 (they hold pre-T0 events that dual writes never copy). The implemented rule copies every **final** bucket that may hold pre-T0 events, with SET, and is re-run after today's day bucket closes.
 
 Grab's post does not say how history reached the new store. We have to decide, because otherwise "last 7 days" on the new store is wrong until 7 days have passed.
 

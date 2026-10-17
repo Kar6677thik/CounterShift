@@ -1,4 +1,4 @@
-using CounterShift.Api.Database;
+using CounterShift.Storage.Postgres;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 
