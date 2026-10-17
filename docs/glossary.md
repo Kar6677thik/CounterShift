@@ -14,6 +14,7 @@ Terms are added the first time they appear in a milestone. The milestone that in
 | **Backpressure** [M3] | Making callers wait (or refusing them) when a resource is saturated, instead of letting load pile up on it. A bounded connection pool is backpressure. |
 | **Branch by abstraction** [M4] | Introduce an interface in front of old code so new and old implementations can coexist while you migrate, keeping the main branch releasable. |
 | **Bucket** [M1] | The stored count for one counter key in one aligned time slot, e.g. `[12:00, 12:15)`. |
+| **Capacity probe** [M8] | A short run at increasing load to find the ceiling before choosing test load. |
 | **Central Package Management** [M0] | NuGet feature (`Directory.Packages.props`) that keeps every package version in one file. |
 | **Characterization test** [M4] | A test that records existing behaviour so a refactor can prove it changed nothing. |
 | **CI** [M0] | Continuous Integration: every push is built and tested automatically (`.github/workflows/ci.yml`). |
@@ -23,6 +24,7 @@ Terms are added the first time they appear in a milestone. The milestone that in
 | **Counter key** [M1] | Counter name + entity value, e.g. `payment_failed_by_card:c_42`. The unit of storage. |
 | **Deadlock** [M3] | Two transactions each holding a lock the other needs. Postgres detects it after `deadlock_timeout` (1 s) and aborts one (SQLSTATE 40P01). |
 | **Decomposition** [M1] | Turning a time window into the fewest aligned buckets that cover it (ADR 0002). |
+| **Dropped iterations (k6)** [M8] | Requests an open-model test couldn't start because the server was too slow: client-side load shedding. |
 | **Dual write** [M6] | Writing every change to both the old and the new store during a migration. |
 | **Effective window** [M1] | The time range actually summed, after the start edge has been rounded down. Always returned to callers. |
 | **Event time vs processing time** [M1] | When something happened vs when we received it. We bucket by event time (ADR 0003). |
@@ -41,7 +43,9 @@ Terms are added the first time they appear in a milestone. The milestone that in
 | **Lua script (Redis)** [M5] | Server-side script run without interleaving other commands: isolated, but not rolled back on error. |
 | **Microsoft.Testing.Platform (MTP)** [M0] | The newer .NET test runner. xunit v3 test projects are executables that host it. |
 | **Mutation testing** [M1] | Deliberately introducing bugs to check that the tests catch them. |
+| **MVCC bloat** [M8] | Space held by old row versions after updates; reclaimed by VACUUM (reusable) or VACUUM FULL (returned to the OS). |
 | **N+1 queries** [M2] | Issuing one query per item instead of one batched query; avoided with `unnest`. |
+| **Open vs closed load model** [M8] | Fixed arrival rate regardless of response time (open) vs N users each waiting for a reply before sending again (closed). |
 | **OTLP** [M7] | OpenTelemetry Protocol: the standard wire format for sending metrics, traces and logs. |
 | **Parallel run / shadow read** [M6] | Serving from the old system while also querying the new one and comparing, without exposing its answers. |
 | **Parity mismatch vs race** [M6] | A difference in a closed bucket (a real bug) vs one in a still-open bucket (in-flight writes). |

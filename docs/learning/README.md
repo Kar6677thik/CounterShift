@@ -20,3 +20,4 @@ One note per milestone, written when the milestone is finished. Read them in ord
 | [05](05-redis-backend.md) | The new backend: Redis hashes, Lua, native expiry; why a naive switch is dangerous | B |
 | [06](06-migration-machinery.md) | Migration machinery: dual writes, shadow parity, split, backfill, live reload | B |
 | [07](07-observability.md) | Observability: OpenTelemetry → Prometheus → Grafana, dashboards as code | C |
+| [08](08-load-and-rehearsal.md) | Load testing (k6), full rehearsal under load, storage footprint | C |

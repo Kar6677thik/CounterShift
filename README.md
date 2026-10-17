@@ -4,7 +4,7 @@ A fraud-counter service that answers time-windowed questions such as *"more than
 
 It is a learning-scale rebuild of Grab's Counter Service and its 2026 storage migration. See [`docs/spec.md`](docs/spec.md) for the full specification.
 
-> **Status:** Batches A and B complete (M0–M6). Working fraud service; storage behind a facade with PostgreSQL and Redis backends; live-reloadable dual-write, shadow, split and backfill migration machinery, verified end to end. Next: Batch C, observability and load-test rehearsal.
+> **Status:** Batches A–C complete (M0–M8). Migration machinery verified end to end, observable in Grafana, and rehearsed under load locally (0 errors, 0 mismatches, 333 ms rollback). Next: Batch D, deploying to k3s through GitHub Actions and the real multi-day migration on the server.
 
 ## Architecture
 
@@ -51,7 +51,9 @@ dotnet test --solution CounterShift.slnx
 | `src/CounterShift.Storage.Postgres` | Legacy backend: SQL, migrations, retention cleanup |
 | `src/CounterShift.Storage.Redis` | New backend: one hash per counter and tier, Lua writes, native expiry |
 | `tests/` | Unit, property and integration tests |
-| `experiments/` | "Break" harnesses that measure failures (lost updates, deadlocks); results in `docs/results/` |
+| `experiments/` | "Break" harnesses (lost updates, deadlocks, hash stability) and the storage-footprint experiment; results in `docs/results/` |
+| `load/` | k6 traffic generator and the migration rehearsal driver |
+| `deploy/observability/` | Prometheus and Grafana config; dashboard generator |
 | `deploy/compose` | Local dependencies |
 | `docs/spec.md` | What we build and why |
 | `docs/learning/` | **Start here to learn**: one note per milestone (what, why, when, commands, self-check) |

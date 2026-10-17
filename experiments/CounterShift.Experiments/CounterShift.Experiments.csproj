@@ -8,5 +8,11 @@
     <PackageReference Include="Dapper" />
     <PackageReference Include="Testcontainers.PostgreSql" />
     <PackageReference Include="System.IO.Hashing" />
+    <PackageReference Include="Testcontainers.Redis" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The footprint experiment uses the real domain planner and the real backends. -->
+    <ProjectReference Include="..\..\src\CounterShift.Storage.Postgres\CounterShift.Storage.Postgres.csproj" />
+    <ProjectReference Include="..\..\src\CounterShift.Storage.Redis\CounterShift.Storage.Redis.csproj" />
   </ItemGroup>
 </Project>
