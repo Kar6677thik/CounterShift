@@ -54,6 +54,8 @@ internal static class BackfillCommand
         }
 
         var report = await services.GetRequiredService<BackfillRunner>().RunAsync(source, target, dualWriteSince, batch, CancellationToken.None);
+        // Operator output must not depend on the machine's locale: en-IN groups digits as "2,10,966".
+        CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
         Console.WriteLine($"Scanned:              {report.Scanned:N0}");
         Console.WriteLine($"Copied:               {report.Copied:N0}");
         Console.WriteLine($"Skipped (after T0):   {report.SkippedAfterT0:N0}   complete via dual writes");

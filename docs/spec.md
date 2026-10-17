@@ -67,7 +67,7 @@ Fraud rules ask time-windowed questions: *"how many payments failed on this card
 | Redis client | StackExchange.Redis | The standard .NET client. It supports pipelining and hash-field expiry. |
 | Hashing for the split | `System.IO.Hashing.XxHash64` | Stable across processes and machines. **`string.GetHashCode()` is randomised per process in .NET**, so it would send the same key to different backends on different pods. This is a real bug we will deliberately avoid and document. |
 | Time | `TimeProvider` (built into .NET) | Bucketing logic becomes testable with a fake clock. |
-| Metrics | OpenTelemetry metrics exposed on `/metrics` in Prometheus format | One standard instrumentation API. Prometheus and Grafana read it. |
+| Metrics | OpenTelemetry metrics **pushed over OTLP** to Prometheus's OTLP receiver (changed by [ADR 0014](adr/0014-otlp-push-to-prometheus.md); originally a scraped `/metrics`) | One standard instrumentation API. Prometheus and Grafana read it. |
 | Tests | xUnit, Testcontainers (real PostgreSQL and Redis), FsCheck for property tests on decomposition | Unit tests where logic is pure, real containers where the database is the point. |
 | Load | k6 | Named in the brief. Scripts are JavaScript. |
 | Local environment | Docker Compose | One `docker compose up` for API, PostgreSQL, Redis, Prometheus and Grafana. |
@@ -189,7 +189,7 @@ HTTP clients retry, and a retried event would be counted twice. We **do not dedu
 | `GET /healthz` | Liveness: the process is up | `200` |
 | `GET /readyz` | Readiness: the stores *required by the current mode* are reachable | `200` / `503` |
 | `GET /admin/storage-mode` | Read-only: the effective read and write modes, and when they loaded | `200` |
-| `GET /metrics` | Prometheus scrape endpoint | `200` |
+| `GET /admin/storage-stats` | Storage footprint per backend (bytes, records) | `200` |
 
 ```json
 POST /v1/decisions

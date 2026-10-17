@@ -4,6 +4,7 @@ using System.Xml;
 using CounterShift.Api;
 using CounterShift.Api.Configuration;
 using CounterShift.Api.ErrorHandling;
+using CounterShift.Api.Observability;
 using CounterShift.Domain;
 using CounterShift.Domain.Counters;
 using CounterShift.Domain.Events;
@@ -41,12 +42,17 @@ if (!string.IsNullOrWhiteSpace(builder.Configuration.GetConnectionString("Redis"
 builder.Services.AddOptions<StorageModeOptions>().Bind(builder.Configuration.GetSection(StorageModeOptions.SectionName));
 builder.Services.AddCounterStore();
 
+builder.Services.AddCounterShiftTelemetry(builder.Configuration);
+
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ProblemExceptionHandler>();
 builder.Services.ConfigureHttpJsonOptions(o =>
     o.SerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase))); // "block", not 2
 
 var app = builder.Build();
+
+app.Logger.LogInformation("Metrics export: {Target}",
+    Telemetry.ExportEndpoint(app.Configuration) is { } target ? $"OTLP → {target}" : "off (set OTEL_EXPORTER_OTLP_METRICS_ENDPOINT to enable)");
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();
@@ -92,12 +98,19 @@ app.MapGet("/admin/storage-mode", (CounterStore store) =>
     });
 });
 
+// Storage footprint per backend, for the "bytes per million events" report. Walks all keys in Redis: never poll it.
+app.MapGet("/admin/storage-stats", async (IEnumerable<ICounterBackend> backends, CancellationToken ct) =>
+    Results.Ok(await Task.WhenAll(backends.Select(b => b.GetStatsAsync(ct)))));
+
 // ── Ingest one event ─────────────────────────────────────────────────────────────────────────────
 app.MapPost("/v1/events", async (
-    EventRequest request, CounterCatalog catalog, IngestionPolicy policy, TimeProvider clock, CounterStore store, CancellationToken ct) =>
+    EventRequest request, CounterCatalog catalog, IngestionPolicy policy, TimeProvider clock, CounterStore store,
+    ApiMetrics metrics, CancellationToken ct) =>
 {
-    var increments = catalog.PlanIncrements(request.ToDomain(), clock.GetUtcNow(), policy);
+    var evt = request.ToDomain();
+    var increments = catalog.PlanIncrements(evt, clock.GetUtcNow(), policy);
     await store.IncrementAsync(increments, ct);
+    metrics.EventIngested(evt.Type);
 
     // 200, not 202: the counts are committed by the time we answer. 202 would promise "accepted, done later".
     return Results.Ok(new EventAccepted([.. increments.Select(i => i.Bucket.Key.Value).Distinct()]));
@@ -105,11 +118,13 @@ app.MapPost("/v1/events", async (
 
 // ── Evaluate fraud rules ─────────────────────────────────────────────────────────────────────────
 app.MapPost("/v1/decisions", async (
-    DecisionRequest request, RuleBook rules, TimeProvider clock, CounterStore store, CancellationToken ct) =>
+    DecisionRequest request, RuleBook rules, TimeProvider clock, CounterStore store, ApiMetrics metrics, CancellationToken ct) =>
 {
     var plan = rules.Plan(request.Action ?? "", request.Entities ?? [], clock.GetUtcNow());
     var counts = await store.ReadAsync(plan.AllBuckets, ct); // one batched read for every rule
-    return Results.Ok(DecisionResponse.From(RuleBook.Evaluate(plan, counts)));
+    var decision = RuleBook.Evaluate(plan, counts);
+    metrics.Decided(decision);
+    return Results.Ok(DecisionResponse.From(decision));
 });
 
 // ── Inspect one counter (debugging and teaching) ──────────────────────────────────────────────────

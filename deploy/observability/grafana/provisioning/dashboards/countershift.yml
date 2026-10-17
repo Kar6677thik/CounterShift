@@ -1,0 +1,9 @@
+apiVersion: 1
+providers:
+  - name: countershift
+    folder: CounterShift
+    type: file
+    disableDeletion: true
+    allowUiUpdates: false   # dashboards are code: change build_dashboard.py, not the UI
+    options:
+      path: /var/lib/grafana/dashboards

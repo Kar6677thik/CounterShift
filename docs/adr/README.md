@@ -19,3 +19,4 @@ Format: Michael Nygard's original ADR template, lightly extended with "Alternati
 | [0011](0011-parity-classification.md) | Shadow parity per bucket: match / mismatch / race / error; gate on closed buckets | Accepted |
 | [0012](0012-backfill-final-pre-t0-buckets.md) | Backfill final, pre-T0, unexpired buckets with SET; re-runnable (corrects spec §8) | Accepted |
 | [0013](0013-runtime-mode-reload.md) | Storage mode from a watched file; validated on reload; last good mode kept | Accepted |
+| [0014](0014-otlp-push-to-prometheus.md) | Metrics via OpenTelemetry, pushed over OTLP to Prometheus (supersedes the spec's `/metrics` scrape) | Accepted |
