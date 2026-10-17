@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <ItemGroup>
+    <ProjectReference Include="..\CounterShift.Domain\CounterShift.Domain.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Npgsql" />
+    <PackageReference Include="Dapper" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Lets the test project use WebApplicationFactory<Program>. -->
+    <InternalsVisibleTo Include="CounterShift.Api.Tests" />
+  </ItemGroup>
+</Project>

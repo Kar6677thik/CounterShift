@@ -1,0 +1,3 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Pure domain logic: no NuGet dependencies, no I/O. Keep it that way. -->
+</Project>
