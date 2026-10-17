@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Legacy backend (spec §6.1): PostgreSQL, one row per bucket. The only project that knows SQL. -->
+  <ItemGroup>
+    <ProjectReference Include="..\CounterShift.Storage\CounterShift.Storage.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Npgsql" />
+    <PackageReference Include="Dapper" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Migrations ship inside the DLL. An explicit LogicalName keeps resource names predictable
+         (MSBuild mangles names that start with digits). -->
+    <EmbeddedResource Include="Migrations\*.sql" LogicalName="CounterShift.Storage.Postgres.Migrations.%(Filename)%(Extension)" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="CounterShift.Storage.Tests" />
+    <InternalsVisibleTo Include="CounterShift.Api.Tests" />
+  </ItemGroup>
+</Project>

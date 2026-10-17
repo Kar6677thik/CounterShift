@@ -4,19 +4,26 @@ Terms are added the first time they appear in a milestone. The milestone that in
 
 | Term | Definition |
 |---|---|
+| **Adapter** [M4] | A class that converts one interface into another; `PostgresCounterBackend` adapts SQL/Npgsql to `ICounterBackend`. |
 | **ADR** [M0] | Architecture Decision Record. A short, immutable note recording one decision and why it was made. See `docs/adr/`. |
 | **Advisory lock** [M2] | A PostgreSQL lock on an arbitrary number rather than a row; used so only one pod runs migrations at a time. |
+| **Architecture fitness test** [M4] | An automated test that checks structural rules (e.g. "the API doesn't reference database drivers"). |
 | **Atomic operation** [M3] | A change that happens completely or not at all, with no observable in-between state. `count = count + 1` in one SQL statement is atomic per row. |
 | **Backpressure** [M3] | Making callers wait (or refusing them) when a resource is saturated, instead of letting load pile up on it. A bounded connection pool is backpressure. |
+| **Branch by abstraction** [M4] | Introduce an interface in front of old code so new and old implementations can coexist while you migrate, keeping the main branch releasable. |
 | **Bucket** [M1] | The stored count for one counter key in one aligned time slot, e.g. `[12:00, 12:15)`. |
 | **Central Package Management** [M0] | NuGet feature (`Directory.Packages.props`) that keeps every package version in one file. |
+| **Characterization test** [M4] | A test that records existing behaviour so a refactor can prove it changed nothing. |
 | **CI** [M0] | Continuous Integration: every push is built and tested automatically (`.github/workflows/ci.yml`). |
+| **Composition root** [M4] | The single place where concrete implementations are chosen and wired together (`Program.cs`). |
 | **Connection pool** [M3] | A reusable set of open database connections. Its maximum size must respect the server's `max_connections` across all replicas. |
+| **Contract test** [M4] | One test suite run against every implementation of an interface, to prove they're interchangeable. |
 | **Counter key** [M1] | Counter name + entity value, e.g. `payment_failed_by_card:c_42`. The unit of storage. |
 | **Deadlock** [M3] | Two transactions each holding a lock the other needs. Postgres detects it after `deadlock_timeout` (1 s) and aborts one (SQLSTATE 40P01). |
 | **Decomposition** [M1] | Turning a time window into the fewest aligned buckets that cover it (ADR 0002). |
 | **Effective window** [M1] | The time range actually summed, after the start edge has been rounded down. Always returned to callers. |
 | **Event time vs processing time** [M1] | When something happened vs when we received it. We bucket by event time (ADR 0003). |
+| **Facade** [M4] | One simple entry point over a more complex subsystem; `CounterStore`. |
 | **Fail closed / fail open** [M2] | On dependency failure, refuse (503) vs allow by default. CounterShift fails closed (ADR 0004). |
 | **Granularity / tier** [M1] | A bucket width: 1m, 15m, 1h, 1d. |
 | **Isolation level** [M3] | How much concurrent transactions can see of each other: READ COMMITTED (Postgres default), REPEATABLE READ, SERIALIZABLE. |
@@ -32,6 +39,7 @@ Terms are added the first time they appear in a milestone. The milestone that in
 | **Read-modify-write** [M2] | Read a value, change it in application code, write it back. Unsafe under concurrency unless protected (see M3). |
 | **Retention** [M1] | How long a tier's buckets are kept. A bucket is deleted only once it *ends* at or before `now − retention`. |
 | **Schema migration** [M2] | A versioned, ordered change to the database schema, applied exactly once per environment. |
+| **Seam** [M4] | A place where behaviour can be changed without editing the code that depends on it. |
 | **Shrinking** [M1] | When a property fails, FsCheck simplifies the failing input to a minimal counter-example. |
 | **Testcontainers** [M0] | A library that starts real throwaway Docker containers (e.g. PostgreSQL) for a test run, then removes them. |
 | **Upsert** [M3] | Insert-or-update in one statement: `INSERT … ON CONFLICT … DO UPDATE`. |

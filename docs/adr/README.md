@@ -12,3 +12,4 @@ Format: Michael Nygard's original ADR template, lightly extended with "Alternati
 | [0004](0004-fail-closed-decisions.md) | Decision API fails closed (503) when storage is unavailable | Accepted |
 | [0005](0005-no-dedup-in-v1.md) | No event deduplication in v1 | Accepted |
 | [0006](0006-atomic-upsert-with-sorted-keys.md) | Atomic multi-row upsert, consistent lock order, bounded connection pool | Accepted |
+| [0007](0007-storage-seam.md) | Storage seam: `ICounterBackend` behind a `CounterStore` facade, with error translation | Accepted |

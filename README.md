@@ -13,7 +13,9 @@ flowchart LR
     client[Client / k6] -->|POST /v1/events| api[CounterShift.Api]
     client -->|POST /v1/decisions| api
     api --> domain[CounterShift.Domain<br/>bucketing · decomposition · rules<br/><i>pure, no I/O</i>]
-    api -->|SQL| pg[(PostgreSQL<br/>counter_buckets)]
+    api --> store[CounterStore<br/><i>facade</i>]
+    store --> pgb[PostgresCounterBackend<br/><i>adapter</i>]
+    pgb -->|SQL| pg[(PostgreSQL<br/>counter_buckets)]
 ```
 
 The target architecture after the migration machinery (M6) is described in spec §7.
@@ -38,7 +40,9 @@ dotnet test --solution CounterShift.slnx
 | Path | What lives there |
 |---|---|
 | `src/CounterShift.Domain` | Pure logic: events, counters, buckets, window decomposition, rules |
-| `src/CounterShift.Api` | HTTP host, configuration, database access |
+| `src/CounterShift.Api` | HTTP host, configuration, composition root |
+| `src/CounterShift.Storage` | Storage seam: `ICounterBackend`, `CounterStore` facade, in-memory backend |
+| `src/CounterShift.Storage.Postgres` | Legacy backend: SQL, migrations, retention cleanup |
 | `tests/` | Unit, property and integration tests |
 | `experiments/` | "Break" harnesses that measure failures (lost updates, deadlocks); results in `docs/results/` |
 | `deploy/compose` | Local dependencies |

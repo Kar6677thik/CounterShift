@@ -3,23 +3,15 @@ using System.Text.Json.Serialization;
 using System.Xml;
 using CounterShift.Api;
 using CounterShift.Api.Configuration;
-using CounterShift.Api.Database;
 using CounterShift.Api.ErrorHandling;
 using CounterShift.Domain;
 using CounterShift.Domain.Counters;
 using CounterShift.Domain.Events;
 using CounterShift.Domain.Rules;
 using CounterShift.Domain.Time;
-using Dapper;
+using CounterShift.Storage;
+using CounterShift.Storage.Postgres;
 using Microsoft.Extensions.Options;
-using Npgsql;
-
-// ─────────────────────────────────────────────────────────────────────────────────────────────────
-// v0 "scattered": the honest first version (spec §9, experiment B2).
-// SQL is written straight inside the endpoint handlers below, as first versions usually are. It works,
-// it's readable, and it ties every handler to PostgreSQL. M4 measures how far that SQL has spread, then
-// moves it behind a storage interface.
-// ─────────────────────────────────────────────────────────────────────────────────────────────────
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,21 +23,11 @@ builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<CounterShiftO
 builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<CounterShiftOptions>>().Value.ToRuleBook(sp.GetRequiredService<CounterCatalog>()));
 builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<CounterShiftOptions>>().Value.ToIngestionPolicy());
 
-// One NpgsqlDataSource per app: it owns the connection pool.
-builder.Services.AddSingleton(sp =>
-{
-    var cs = sp.GetRequiredService<IConfiguration>().GetConnectionString("Postgres");
-    if (string.IsNullOrWhiteSpace(cs))
-    {
-        throw new InvalidOperationException("ConnectionStrings:Postgres is not configured.");
-    }
-    var dataSource = new NpgsqlDataSourceBuilder(cs);
-    dataSource.ConnectionStringBuilder.MaxPoolSize = sp.GetRequiredService<IOptions<CounterShiftOptions>>().Value.MaxPoolSize;
-    return dataSource.Build();
-});
-builder.Services.AddSingleton<MigrationRunner>();
-builder.Services.AddSingleton<RetentionCleanupService>();
-builder.Services.AddHostedService(sp => sp.GetRequiredService<RetentionCleanupService>());
+// ── Storage: the composition root ───────────────────────────────────────────────────────────────
+// The ONLY place in the API that names a concrete backend. Everything below talks to CounterStore.
+builder.Services.AddOptions<PostgresOptions>().Bind(builder.Configuration.GetSection(PostgresOptions.SectionName));
+builder.Services.AddPostgresCounterBackend(sp => sp.GetRequiredService<IConfiguration>().GetConnectionString("Postgres"));
+builder.Services.AddSingleton<CounterStore>();
 
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ProblemExceptionHandler>();
@@ -59,51 +41,27 @@ app.UseStatusCodePages();
 
 // Resolve the domain singletons now, so a bad config fails at startup rather than on the first request.
 app.Services.GetRequiredService<RuleBook>();
-await app.Services.GetRequiredService<MigrationRunner>().ApplyAsync();
+foreach (var initializer in app.Services.GetServices<IStorageInitializer>())
+{
+    await initializer.InitializeAsync(CancellationToken.None); // e.g. schema migrations
+}
 
 // Liveness: is the process alive? It deliberately checks nothing else (spec §5).
 app.MapGet("/healthz", () => Results.Ok(new { status = "ok" }));
 
-// Readiness: can we serve traffic, i.e. is the database reachable?
-app.MapGet("/readyz", async (NpgsqlDataSource db, CancellationToken ct) =>
+// Readiness: can we serve traffic, i.e. are the stores we depend on reachable?
+app.MapGet("/readyz", async (CounterStore store, CancellationToken ct) =>
 {
-    await using var conn = await db.OpenConnectionAsync(ct);
-    await conn.ExecuteScalarAsync<int>(new CommandDefinition("SELECT 1", cancellationToken: ct));
+    await store.CheckReadyAsync(ct);
     return Results.Ok(new { status = "ready" });
 });
 
 // ── Ingest one event ─────────────────────────────────────────────────────────────────────────────
 app.MapPost("/v1/events", async (
-    EventRequest request, CounterCatalog catalog, IngestionPolicy policy, TimeProvider clock,
-    NpgsqlDataSource db, CancellationToken ct) =>
+    EventRequest request, CounterCatalog catalog, IngestionPolicy policy, TimeProvider clock, CounterStore store, CancellationToken ct) =>
 {
     var increments = catalog.PlanIncrements(request.ToDomain(), clock.GetUtcNow(), policy);
-
-    // ADR 0006. v0 did read-modify-write here and lost 97.9% of increments under 50 concurrent writers
-    // (experiment B1). Now every bucket of the event goes through ONE statement:
-    //  • atomic: Postgres reads, adds and writes each row while holding its row lock, so concurrent
-    //    increments queue up instead of overwriting each other;
-    //  • all-or-nothing: a single statement is its own transaction, so no explicit BEGIN is needed;
-    //  • ORDER BY: every writer locks rows in the same order, so two events can't deadlock (experiment B5);
-    //  • GroupBy: ON CONFLICT can't touch the same row twice in one statement, so duplicates are merged first.
-    var merged = increments.GroupBy(i => i.Bucket).Select(g => (Bucket: g.Key, Delta: g.Sum(i => i.Delta))).ToList();
-    await using var conn = await db.OpenConnectionAsync(ct);
-    await conn.ExecuteAsync(new CommandDefinition(
-        """
-        INSERT INTO counter_buckets (counter_key, granularity, bucket_start, count)
-        SELECT * FROM unnest(@keys, @granularities, @starts, @deltas) AS t(counter_key, granularity, bucket_start, delta)
-        ORDER BY counter_key, granularity, bucket_start
-        ON CONFLICT (counter_key, granularity, bucket_start)
-        DO UPDATE SET count = counter_buckets.count + EXCLUDED.count
-        """,
-        new
-        {
-            keys = merged.Select(m => m.Bucket.Key.Value).ToArray(),
-            granularities = merged.Select(m => (short)m.Bucket.Span.Granularity.Minutes).ToArray(),
-            starts = merged.Select(m => m.Bucket.Span.Start.UtcDateTime).ToArray(),
-            deltas = merged.Select(m => m.Delta).ToArray(),
-        },
-        cancellationToken: ct));
+    await store.IncrementAsync(increments, ct);
 
     // 200, not 202: the counts are committed by the time we answer. 202 would promise "accepted, done later".
     return Results.Ok(new EventAccepted([.. increments.Select(i => i.Bucket.Key.Value).Distinct()]));
@@ -111,39 +69,17 @@ app.MapPost("/v1/events", async (
 
 // ── Evaluate fraud rules ─────────────────────────────────────────────────────────────────────────
 app.MapPost("/v1/decisions", async (
-    DecisionRequest request, RuleBook rules, TimeProvider clock, NpgsqlDataSource db, CancellationToken ct) =>
+    DecisionRequest request, RuleBook rules, TimeProvider clock, CounterStore store, CancellationToken ct) =>
 {
     var plan = rules.Plan(request.Action ?? "", request.Entities ?? [], clock.GetUtcNow());
-    var buckets = plan.AllBuckets;
-
-    // One round trip for every bucket of every rule: unnest() turns three parallel arrays into rows to join against.
-    await using var conn = await db.OpenConnectionAsync(ct);
-    var rows = await conn.QueryAsync<(string Key, short Granularity, DateTime Start, long Count)>(new CommandDefinition(
-        """
-        SELECT b.counter_key, b.granularity, b.bucket_start, b.count
-        FROM counter_buckets b
-        JOIN unnest(@keys, @granularities, @starts) AS q(counter_key, granularity, bucket_start)
-          ON b.counter_key = q.counter_key AND b.granularity = q.granularity AND b.bucket_start = q.bucket_start
-        """,
-        new
-        {
-            keys = buckets.Select(b => b.Key.Value).ToArray(),
-            granularities = buckets.Select(b => (short)b.Span.Granularity.Minutes).ToArray(),
-            starts = buckets.Select(b => b.Span.Start.UtcDateTime).ToArray(),
-        },
-        cancellationToken: ct));
-
-    var counts = rows.ToDictionary(
-        r => new BucketRef(CounterKey.Parse(r.Key), new BucketSpan(Granularity.FromMinutes(r.Granularity), new DateTimeOffset(r.Start, TimeSpan.Zero))),
-        r => r.Count);
-
+    var counts = await store.ReadAsync(plan.AllBuckets, ct); // one batched read for every rule
     return Results.Ok(DecisionResponse.From(RuleBook.Evaluate(plan, counts)));
 });
 
 // ── Inspect one counter (debugging and teaching) ──────────────────────────────────────────────────
 app.MapGet("/v1/counters/{counter}/{entity}", async (
     string counter, string entity, string? window, CounterCatalog catalog, IOptions<CounterShiftOptions> options,
-    TimeProvider clock, NpgsqlDataSource db, CancellationToken ct) =>
+    TimeProvider clock, CounterStore store, CancellationToken ct) =>
 {
     if (catalog.Find(counter) is null)
     {
@@ -170,27 +106,11 @@ app.MapGet("/v1/counters/{counter}/{entity}", async (
     var now = clock.GetUtcNow();
     var key = CounterKey.For(counter, entity);
     var decomposition = WindowDecomposer.DecomposeTrailing(length, now, catalog.Tiers);
+    var refs = decomposition.Buckets.Select(span => new BucketRef(key, span)).ToList();
+    var found = await store.ReadAsync(refs, ct);
 
-    await using var conn = await db.OpenConnectionAsync(ct);
-    var rows = await conn.QueryAsync<(short Granularity, DateTime Start, long Count)>(new CommandDefinition(
-        """
-        SELECT b.granularity, b.bucket_start, b.count
-        FROM counter_buckets b
-        JOIN unnest(@granularities, @starts) AS q(granularity, bucket_start)
-          ON b.granularity = q.granularity AND b.bucket_start = q.bucket_start
-        WHERE b.counter_key = @key
-        """,
-        new
-        {
-            key = key.Value,
-            granularities = decomposition.Buckets.Select(b => (short)b.Granularity.Minutes).ToArray(),
-            starts = decomposition.Buckets.Select(b => b.Start.UtcDateTime).ToArray(),
-        },
-        cancellationToken: ct));
-    var found = rows.ToDictionary(r => (Minutes: (int)r.Granularity, Start: new DateTimeOffset(r.Start, TimeSpan.Zero)), r => r.Count);
-
-    var buckets = decomposition.Buckets
-        .Select(b => new BucketValueResponse(b.Granularity.Name, b.Start, found.GetValueOrDefault((b.Granularity.Minutes, b.Start))))
+    var buckets = refs
+        .Select(r => new BucketValueResponse(r.Span.Granularity.Name, r.Span.Start, found.GetValueOrDefault(r)))
         .ToList();
     return Results.Ok(new CounterResponse(key.Value, buckets.Sum(b => b.Count), new EffectiveWindow(decomposition.EffectiveFrom, now), buckets));
 });

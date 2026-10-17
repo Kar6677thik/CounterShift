@@ -1,7 +1,6 @@
-using System.Net.Sockets;
 using CounterShift.Domain;
+using CounterShift.Storage;
 using Microsoft.AspNetCore.Diagnostics;
-using Npgsql;
 
 namespace CounterShift.Api.ErrorHandling;
 
@@ -41,7 +40,7 @@ internal sealed partial class ProblemExceptionHandler(IProblemDetailsService pro
                 title = "The request body could not be read.";
                 break;
 
-            case NpgsqlException or SocketException or TimeoutException:
+            case StorageUnavailableException:
                 status = StatusCodes.Status503ServiceUnavailable;
                 title = "Counter storage is unavailable.";
                 LogStorageUnavailable(logger, exception);
