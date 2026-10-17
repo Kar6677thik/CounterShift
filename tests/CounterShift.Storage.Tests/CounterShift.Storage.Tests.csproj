@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CounterShift.Storage\CounterShift.Storage.csproj" />
+    <ProjectReference Include="..\..\src\CounterShift.Storage.Postgres\CounterShift.Storage.Postgres.csproj" />
+    <ProjectReference Include="..\..\src\CounterShift.Storage.Redis\CounterShift.Storage.Redis.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="Testcontainers.Redis" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.Testing" />
+  </ItemGroup>
+</Project>

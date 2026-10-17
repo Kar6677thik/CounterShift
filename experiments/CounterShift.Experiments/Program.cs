@@ -10,10 +10,31 @@ using Testcontainers.PostgreSql;
 //
 //   dotnet run -c Release --project experiments/CounterShift.Experiments -- lost-updates [--writers 50] [--increments 1000]
 //   dotnet run -c Release --project experiments/CounterShift.Experiments -- deadlocks    [--writers 50] [--statements 200] [--rows 20]
+//   dotnet run -c Release --project experiments/CounterShift.Experiments -- hash-stability
+//   dotnet run -c Release --project experiments/CounterShift.Experiments -- footprint [--events 1000000] [--cards 100000] [--users 50000] [--concurrency 32]
 //   add  --connection "Host=...;..."  to use an existing database instead of a throwaway container.
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 
+// Results must read the same on every machine: this laptop's en-IN locale prints 1000000 as "10,00,000".
+CultureInfo.DefaultThreadCurrentCulture = CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
+
 var experiment = args.FirstOrDefault() ?? "lost-updates";
+if (experiment == "hash-print")
+{
+    HashStability.Print(); // child process for the hash experiment: no database needed
+    return 0;
+}
+if (experiment == "hash-stability")
+{
+    await HashStability.RunAsync(pods: 3);
+    return 0;
+}
+if (experiment == "footprint")
+{
+    int Opt(string name, int fallback) => Array.IndexOf(args, name) is var i and >= 0 ? int.Parse(args[i + 1], CultureInfo.InvariantCulture) : fallback;
+    await Footprint.RunAsync(Opt("--events", 1_000_000), Opt("--cards", 100_000), Opt("--users", 50_000), Opt("--concurrency", 32));
+    return 0;
+}
 int Arg(string name, int fallback)
 {
     var i = Array.IndexOf(args, name);

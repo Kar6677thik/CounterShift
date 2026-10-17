@@ -6,6 +6,8 @@
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
     <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="Testcontainers.Redis" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.Testing" />
     <PackageReference Include="Npgsql" />
     <PackageReference Include="Dapper" />
   </ItemGroup>

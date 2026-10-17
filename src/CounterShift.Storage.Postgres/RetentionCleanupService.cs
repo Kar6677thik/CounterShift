@@ -1,10 +1,11 @@
-using CounterShift.Api.Configuration;
 using CounterShift.Domain.Time;
 using Dapper;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Npgsql;
 
-namespace CounterShift.Api;
+namespace CounterShift.Storage.Postgres;
 
 /// <summary>
 /// Deletes buckets that have aged out of their tier's retention (spec §4.5), every few minutes.
@@ -19,7 +20,7 @@ namespace CounterShift.Api;
 public sealed partial class RetentionCleanupService(
     NpgsqlDataSource dataSource,
     TimeProvider clock,
-    IOptions<CounterShiftOptions> options,
+    IOptions<PostgresOptions> options,
     ILogger<RetentionCleanupService> logger) : BackgroundService
 {
     private const int BatchSize = 5_000;

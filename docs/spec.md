@@ -67,7 +67,7 @@ Fraud rules ask time-windowed questions: *"how many payments failed on this card
 | Redis client | StackExchange.Redis | The standard .NET client. It supports pipelining and hash-field expiry. |
 | Hashing for the split | `System.IO.Hashing.XxHash64` | Stable across processes and machines. **`string.GetHashCode()` is randomised per process in .NET**, so it would send the same key to different backends on different pods. This is a real bug we will deliberately avoid and document. |
 | Time | `TimeProvider` (built into .NET) | Bucketing logic becomes testable with a fake clock. |
-| Metrics | OpenTelemetry metrics exposed on `/metrics` in Prometheus format | One standard instrumentation API. Prometheus and Grafana read it. |
+| Metrics | OpenTelemetry metrics **pushed over OTLP** to Prometheus's OTLP receiver (changed by [ADR 0014](adr/0014-otlp-push-to-prometheus.md); originally a scraped `/metrics`) | One standard instrumentation API. Prometheus and Grafana read it. |
 | Tests | xUnit, Testcontainers (real PostgreSQL and Redis), FsCheck for property tests on decomposition | Unit tests where logic is pure, real containers where the database is the point. |
 | Load | k6 | Named in the brief. Scripts are JavaScript. |
 | Local environment | Docker Compose | One `docker compose up` for API, PostgreSQL, Redis, Prometheus and Grafana. |
@@ -189,7 +189,7 @@ HTTP clients retry, and a retried event would be counted twice. We **do not dedu
 | `GET /healthz` | Liveness: the process is up | `200` |
 | `GET /readyz` | Readiness: the stores *required by the current mode* are reachable | `200` / `503` |
 | `GET /admin/storage-mode` | Read-only: the effective read and write modes, and when they loaded | `200` |
-| `GET /metrics` | Prometheus scrape endpoint | `200` |
+| `GET /admin/storage-stats` | Storage footprint per backend (bytes, records) | `200` |
 
 ```json
 POST /v1/decisions
@@ -275,6 +275,8 @@ One shared test suite (`CounterBackendContract`) runs against **every** backend.
 
 ### 7.1 Two independent knobs
 
+> Implemented in M6. Details and refinements: ADRs [0009](adr/0009-dual-write-semantics.md)–[0013](adr/0013-runtime-mode-reload.md). Backend names are `postgres` (Legacy) and `redis` (New). Metric names follow OpenTelemetry style (`cs.storage.operation.duration`, exported to Prometheus as `cs_storage_operation_duration_seconds`).
+
 Grab describes *read* modes. We add an explicit **write mode** too, because that is where data consistency is decided:
 
 | Knob | Values |
@@ -337,6 +339,8 @@ Every storage call records `cs_storage_op_duration_seconds{backend, op=read|writ
 ---
 
 ## 8. Backfill (filling the new store with history)
+
+> **Corrected by [ADR 0012](adr/0012-backfill-final-pre-t0-buckets.md).** The rule below misses buckets that *straddle* T0 (they hold pre-T0 events that dual writes never copy). The implemented rule copies every **final** bucket that may hold pre-T0 events, with SET, and is re-run after today's day bucket closes.
 
 Grab's post does not say how history reached the new store. We have to decide, because otherwise "last 7 days" on the new store is wrong until 7 days have passed.
 
