@@ -1,0 +1,20 @@
+# Prometheus for CounterShift. The API *pushes* metrics over OTLP (ADR 0014), so there is no scrape job for it:
+# Prometheus is started with --web.enable-otlp-receiver and accepts writes on /api/v1/otlp/v1/metrics.
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+otlp:
+  # OTLP resource attributes become the job/instance labels automatically (service.name / service.instance.id).
+  # Keep the service version too, so a dashboard can tell two deployed versions apart.
+  promote_resource_attributes: [service.version]
+
+storage:
+  tsdb:
+    # Pushed samples can arrive slightly out of order (several pods, retries); accept up to 30 min late.
+    out_of_order_time_window: 30m
+
+scrape_configs:
+  - job_name: prometheus   # Prometheus watching itself
+    static_configs:
+      - targets: ["localhost:9090"]

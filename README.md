@@ -28,11 +28,14 @@ The migration plan and its runbook: [`docs/runbooks/migration.md`](docs/runbooks
 Prerequisites: .NET SDK 10.0.4xx and Docker.
 
 ```bash
-# 1. Start PostgreSQL (host port 55432) and Redis (host port 56379)
+# 1. Start PostgreSQL (55432), Redis (56379), Prometheus (59090) and Grafana (53000)
 docker compose -f deploy/compose/docker-compose.yml up -d
 
 # 2. Run the API (applies database migrations on startup)
 ASPNETCORE_ENVIRONMENT=Development dotnet run --project src/CounterShift.Api --no-launch-profile --urls http://localhost:5072
+
+# Optional: push metrics to the local Prometheus (Grafana at http://localhost:53000)
+#   export OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://127.0.0.1:59090/api/v1/otlp/v1/metrics
 
 # 3. Run all tests (integration tests start their own throwaway Postgres via Testcontainers)
 dotnet test --solution CounterShift.slnx

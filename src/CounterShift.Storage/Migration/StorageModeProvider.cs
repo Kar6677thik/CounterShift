@@ -1,3 +1,4 @@
+using System.Diagnostics.Metrics;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -50,7 +51,7 @@ public sealed partial class StorageModeProvider : IDisposable
 
     public StorageModeProvider(
         IOptionsMonitor<StorageModeOptions> options, IEnumerable<ICounterBackend> backends,
-        TimeProvider clock, StorageMetrics metrics, ILogger<StorageModeProvider> logger)
+        TimeProvider clock, StorageMetrics metrics, IMeterFactory meterFactory, ILogger<StorageModeProvider> logger)
     {
         ArgumentNullException.ThrowIfNull(options);
         _registered = backends.Select(b => b.Name).ToHashSet(StringComparer.Ordinal);
@@ -67,6 +68,15 @@ public sealed partial class StorageModeProvider : IDisposable
         _active = new ActiveStorageMode(initial, clock.GetUtcNow(), 1);
         LogModeLoaded(logger, initial.ToString(), 1);
         _subscription = options.OnChange(Apply);
+
+        // Observable gauges: sampled at export time. On a dashboard they draw the migration as step lines
+        // (mode version, shadow %, split %), so every latency or parity change lines up with the phase that caused it.
+        ArgumentNullException.ThrowIfNull(meterFactory);
+        var meter = meterFactory.Create(StorageMetrics.MeterName);
+        meter.CreateObservableGauge("cs.storage.mode.version", () => Current.Version, description: "Version of the active storage mode; increments on every accepted change.");
+        meter.CreateObservableGauge("cs.storage.read.shadow_percent", () => Current.Mode.Read.Kind == ReadKind.Shadow ? Current.Mode.Read.Percent : 0, description: "Share of counters shadow-compared.");
+        meter.CreateObservableGauge("cs.storage.read.split_percent", () => Current.Mode.Read.Kind == ReadKind.Split ? Current.Mode.Read.Percent : 0, description: "Share of counters served by the read secondary.");
+        meter.CreateObservableGauge("cs.storage.write.dual", () => Current.Mode.Write.Kind == WriteKind.Dual ? 1 : 0, description: "1 while dual writes are on.");
     }
 
     /// <summary>Read once per request and use that snapshot throughout, so a mode switch never splits a request.</summary>

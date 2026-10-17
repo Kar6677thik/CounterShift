@@ -32,6 +32,7 @@ Terms are added the first time they appear in a milestone. The milestone that in
 | **Final bucket** [M6] | A bucket no event can still arrive for: `end + MaxLateness (+ margin) ≤ now`. |
 | **Granularity / tier** [M1] | A bucket width: 1m, 15m, 1h, 1d. |
 | **Hash tag** [M5] | The `{…}` part of a Redis key. In a cluster, only that part decides the slot, so related keys stay together. |
+| **Histogram quantile** [M7] | Estimating p50/p99 from bucket counts; precision is limited by the bucket edges around the value. |
 | **Idempotent** [M6] | Doing it twice has the same effect as doing it once (SET is idempotent; increment isn't). |
 | **Isolation level** [M3] | How much concurrent transactions can see of each other: READ COMMITTED (Postgres default), REPEATABLE READ, SERIALIZABLE. |
 | **Liveness vs readiness** [M0] | Liveness (`/healthz`): "is the process alive? If not, restart it." Readiness (`/readyz`): "can it serve traffic right now? If not, stop sending it requests." Mixing them up causes restart loops when a database blips. |
@@ -41,17 +42,21 @@ Terms are added the first time they appear in a milestone. The milestone that in
 | **Microsoft.Testing.Platform (MTP)** [M0] | The newer .NET test runner. xunit v3 test projects are executables that host it. |
 | **Mutation testing** [M1] | Deliberately introducing bugs to check that the tests catch them. |
 | **N+1 queries** [M2] | Issuing one query per item instead of one batched query; avoided with `unnest`. |
+| **OTLP** [M7] | OpenTelemetry Protocol: the standard wire format for sending metrics, traces and logs. |
 | **Parallel run / shadow read** [M6] | Serving from the old system while also querying the new one and comparing, without exposing its answers. |
 | **Parity mismatch vs race** [M6] | A difference in a closed bucket (a real bug) vs one in a still-open bucket (in-flight writes). |
 | **Per-field expiry** [M5] | Redis 7.4+ `HPEXPIREAT`: individual fields of a hash expire at their own times. |
 | **Pessimistic vs optimistic locking** [M3] | Lock first then change (`SELECT … FOR UPDATE`), vs change freely and detect conflicts at commit (SERIALIZABLE, version columns), retrying on conflict. |
 | **Problem details** [M2] | RFC 9457 standard JSON error format (`application/problem+json`). |
 | **Property-based testing** [M1] | Stating rules that must hold for all inputs and letting a tool (FsCheck) search for counter-examples. |
+| **Pull vs push metrics** [M7] | Prometheus scraping each target (pull) vs each app sending to Prometheus (push). We push (ADR 0014). |
 | **Read-modify-write** [M2] | Read a value, change it in application code, write it back. Unsafe under concurrency unless protected (see M3). |
+| **RED method** [M7] | Watch Rate, Errors and Duration for every service and endpoint. |
 | **Retention** [M1] | How long a tier's buckets are kept. A bucket is deleted only once it *ends* at or before `now − retention`. |
 | **Rollout percentage** [M6] | The share of counter keys included, chosen by a stable hash so it is deterministic and only grows. |
 | **Schema migration** [M2] | A versioned, ordered change to the database schema, applied exactly once per environment. |
 | **Seam** [M4] | A place where behaviour can be changed without editing the code that depends on it. |
+| **Self-diagnostics (OpenTelemetry)** [M7] | The SDK's own log of its internal errors, enabled with an `OTEL_DIAGNOSTICS.json` file next to the app. |
 | **Shrinking** [M1] | When a property fails, FsCheck simplifies the failing input to a minimal counter-example. |
 | **T0** [M6] | The moment every instance is dual-writing. Everything before it is "history" that needs a backfill. |
 | **Testcontainers** [M0] | A library that starts real throwaway Docker containers (e.g. PostgreSQL) for a test run, then removes them. |

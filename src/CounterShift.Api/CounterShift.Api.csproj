@@ -7,6 +7,12 @@
     <ProjectReference Include="..\CounterShift.Storage.Redis\CounterShift.Storage.Redis.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+  </ItemGroup>
+  <ItemGroup>
     <InternalsVisibleTo Include="CounterShift.Api.Tests" />
   </ItemGroup>
 </Project>
