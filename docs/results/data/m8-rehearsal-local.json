@@ -1,0 +1,586 @@
+{
+  "run_id": "20261017T121317Z",
+  "t0": "2026-10-17T12:14:29.0217223+00:00",
+  "machine": {
+    "os": "Windows-11-10.0.26100-SP0",
+    "cpus": 14,
+    "python": "3.12.10"
+  },
+  "args": {
+    "mode_file": "<mode file>",
+    "api": "http://127.0.0.1:5072",
+    "prom": "http://127.0.0.1:59090",
+    "k6_base": "http://host.docker.internal:5072",
+    "step_seconds": 30,
+    "event_rate": 200,
+    "decision_rate": 400
+  },
+  "backfill": "Scanned:              401,218\nCopied:               188,899\nSkipped (after T0):   15,001   complete via dual writes\nSkipped (expired):    0\nNot final yet:        197,318\nElapsed:              00:00:18.8290999\nSome pre-T0 buckets can still receive events. Run again after 2026-10-18T00:06:00.0000000+00:00 (re-runs are safe: SET is idempotent).",
+  "k6_baseline": {
+    "requests": 41981,
+    "failed_rate": 0,
+    "failed": 0,
+    "dropped_iterations": 21,
+    "latency_ms": {
+      "p(50)": 2.45,
+      "p(95)": 4.03,
+      "p(99)": 6.06,
+      "max": 225.28
+    }
+  },
+  "k6_migration": {
+    "requests": 329851,
+    "failed_rate": 0,
+    "failed": 0,
+    "dropped_iterations": 151,
+    "latency_ms": {
+      "p(50)": 2.61,
+      "p(95)": 6.2,
+      "p(99)": 12.67,
+      "max": 566.38
+    }
+  },
+  "steps": [
+    {
+      "name": "P0 baseline",
+      "mode": "write=Single(postgres) read=Single(postgres)",
+      "start": 1792239207.8046608,
+      "end": 1792239267.8049846,
+      "seconds": 60,
+      "propagation_ms": null,
+      "rps": {
+        "/readyz": 0.0,
+        "/v1/events": 200.0218165951567,
+        "/v1/decisions": 400.0618136862774,
+        "/admin/storage-mode": 0.0
+      },
+      "non2xx": 0.0,
+      "http_p0.5": {
+        "/v1/events": 0.002464631422189129,
+        "/v1/decisions": 0.0014683762040859534
+      },
+      "storage_p0.5": {
+        "postgres write primary": 0.0023721549314521494,
+        "postgres read primary": 0.001360480560251147
+      },
+      "http_p0.99": {
+        "/v1/events": 0.004961712204007283,
+        "/v1/decisions": 0.0029294080604533998
+      },
+      "storage_p0.99": {
+        "postgres write primary": 0.004887899159663863,
+        "postgres read primary": 0.002581415384615381
+      },
+      "parity": {},
+      "secondary_failures": 0.0,
+      "shadow_dropped": 0.0
+    },
+    {
+      "name": "P1 dual writes",
+      "mode": "write=Dual(postgres\u2192redis) read=Single(postgres)",
+      "start": 1792239279.049697,
+      "end": 1792239339.0500798,
+      "seconds": 60,
+      "propagation_ms": 267.5908999990497,
+      "rps": {
+        "/readyz": 0.0,
+        "/v1/events": 200.01091167003108,
+        "/v1/decisions": 400.0400094567807,
+        "/admin/storage-mode": 0.0
+      },
+      "non2xx": 0.0,
+      "http_p0.5": {
+        "/v1/events": 0.0039023583865990742,
+        "/v1/decisions": 0.0015389123185562967
+      },
+      "storage_p0.5": {
+        "postgres write primary": 0.002532677595628415,
+        "redis write secondary": 0.0008166897028334486,
+        "postgres read primary": 0.001511651420317766
+      },
+      "http_p0.99": {
+        "/v1/events": 0.007222934782608699,
+        "/v1/decisions": 0.00297938078291815
+      },
+      "storage_p0.99": {
+        "postgres write primary": 0.00494583916083916,
+        "redis write secondary": 0.001984830357142857,
+        "postgres read primary": 0.0028844568245125343
+      },
+      "parity": {},
+      "secondary_failures": 0.0,
+      "shadow_dropped": 0.0
+    },
+    {
+      "name": "P2 shadow 5%",
+      "mode": "write=Dual(postgres\u2192redis) read=Shadow(postgres, redis, 5%)",
+      "start": 1792239361.512653,
+      "end": 1792239391.5132868,
+      "seconds": 30,
+      "propagation_ms": 265.4208000021754,
+      "rps": {
+        "/readyz": 0.0,
+        "/v1/events": 199.9439932791935,
+        "/v1/decisions": 399.84798175781094,
+        "/admin/storage-mode": 0.0
+      },
+      "non2xx": 0.0,
+      "http_p0.5": {
+        "/v1/events": 0.00391958762886598,
+        "/v1/decisions": 0.0015432065217391305
+      },
+      "storage_p0.5": {
+        "postgres write primary": 0.0025359051824308623,
+        "redis write secondary": 0.0008167300380228137,
+        "postgres read primary": 0.0015139247034553895
+      },
+      "http_p0.99": {
+        "/v1/events": 0.006996052631578946,
+        "/v1/decisions": 0.0029872869318181825
+      },
+      "storage_p0.99": {
+        "postgres read primary": 0.002801853448275857,
+        "postgres write primary": 0.0049525701943844485,
+        "redis write secondary": 0.0019776023391812865
+      },
+      "parity": {
+        "match": 829.299515941913
+      },
+      "secondary_failures": 0.0,
+      "shadow_dropped": 0.0
+    },
+    {
+      "name": "P2 shadow 20%",
+      "mode": "write=Dual(postgres\u2192redis) read=Shadow(postgres, redis, 20%)",
+      "start": 1792239391.7827222,
+      "end": 1792239421.7836993,
+      "seconds": 30,
+      "propagation_ms": 265.3409999984433,
+      "rps": {
+        "/readyz": 0.0,
+        "/v1/events": 200.03201152414871,
+        "/v1/decisions": 400.02400864311153,
+        "/admin/storage-mode": 0.0
+      },
+      "non2xx": 0.0,
+      "http_p0.5": {
+        "/v1/events": 0.004394395280235989,
+        "/v1/decisions": 0.0018921113689095129
+      },
+      "storage_p0.5": {
+        "redis write secondary": 0.00110452543051662,
+        "postgres read primary": 0.001741210502892746,
+        "postgres write primary": 0.002921289355322339
+      },
+      "http_p0.99": {
+        "/v1/events": 0.01181893939393946,
+        "/v1/decisions": 0.005611944444444469
+      },
+      "storage_p0.99": {
+        "postgres write primary": 0.007648529411764745,
+        "redis write secondary": 0.004112000000000022,
+        "postgres read primary": 0.004949095127610216
+      },
+      "parity": {
+        "match": 3606.098195350326
+      },
+      "secondary_failures": 0.0,
+      "shadow_dropped": 0.0
+    },
+    {
+      "name": "P2 shadow 50%",
+      "mode": "write=Dual(postgres\u2192redis) read=Shadow(postgres, redis, 50%)",
+      "start": 1792239422.122464,
+      "end": 1792239452.123169,
+      "seconds": 30,
+      "propagation_ms": 315.804300000309,
+      "rps": {
+        "/readyz": 0.0,
+        "/v1/events": 200.0080003200128,
+        "/v1/decisions": 400.0160006400256,
+        "/admin/storage-mode": 0.0
+      },
+      "non2xx": 0.0,
+      "http_p0.5": {
+        "/v1/decisions": 0.0016148548942449582,
+        "/v1/events": 0.0040501858736059475
+      },
+      "storage_p0.5": {
+        "postgres write primary": 0.0026397385620915035,
+        "redis write secondary": 0.0008452085059375864,
+        "postgres read primary": 0.001557179515787125
+      },
+      "http_p0.99": {
+        "/v1/events": 0.010370370370370375,
+        "/v1/decisions": 0.004801324503311252
+      },
+      "storage_p0.99": {
+        "postgres write primary": 0.007738095238095242,
+        "redis write secondary": 0.0026969696969696933,
+        "postgres read primary": 0.004066666666666676
+      },
+      "parity": {
+        "match": 7779.911196447858
+      },
+      "secondary_failures": 0.0,
+      "shadow_dropped": 0.0
+    },
+    {
+      "name": "P2 shadow 100%",
+      "mode": "write=Dual(postgres\u2192redis) read=Shadow(postgres, redis, 100%)",
+      "start": 1792239452.3947802,
+      "end": 1792239512.39543,
+      "seconds": 60,
+      "propagation_ms": 266.2137999977858,
+      "rps": {
+        "/readyz": 0.0,
+        "/v1/events": 200.0181818181818,
+        "/v1/decisions": 400.0363636363636,
+        "/admin/storage-mode": 0.0
+      },
+      "non2xx": 0.0,
+      "http_p0.5": {
+        "/v1/events": 0.003691340602950609,
+        "/v1/decisions": 0.0015374541900806254
+      },
+      "storage_p0.5": {
+        "postgres write primary": 0.0025186787905346186,
+        "redis write secondary": 0.0007742765834198007,
+        "postgres read primary": 0.0015126446635233604
+      },
+      "http_p0.99": {
+        "/v1/events": 0.0071641044776119284,
+        "/v1/decisions": 0.0030102617801046855
+      },
+      "storage_p0.99": {
+        "postgres write primary": 0.004915446685878961,
+        "redis write secondary": 0.0019592400881057264,
+        "postgres read primary": 0.002815446428571425
+      },
+      "parity": {
+        "match": 24003.272727272724
+      },
+      "secondary_failures": 0.0,
+      "shadow_dropped": 0.0
+    },
+    {
+      "name": "P3 split 5%",
+      "mode": "write=Dual(postgres\u2192redis) read=Split(postgres, redis, 5%)",
+      "start": 1792239512.7128432,
+      "end": 1792239542.7140348,
+      "seconds": 30,
+      "propagation_ms": 275.3088999997999,
+      "rps": {
+        "/readyz": 0.0,
+        "/v1/events": 200.07199712011518,
+        "/v1/decisions": 400.06399744010236,
+        "/admin/storage-mode": 0.0
+      },
+      "non2xx": 0.0,
+      "http_p0.5": {
+        "/v1/events": 0.004463175122749591,
+        "/v1/decisions": 0.0019808650588000794
+      },
+      "storage_p0.5": {
+        "postgres write primary": 0.0029956709956709955,
+        "redis write secondary": 0.0011673018292682926,
+        "postgres read primary": 0.00181672689726381,
+        "redis read secondary": 0.0009832371777544443
+      },
+      "http_p0.99": {
+        "/v1/events": 0.015438235294117591,
+        "/v1/decisions": 0.006930487804878034
+      },
+      "storage_p0.99": {
+        "postgres write primary": 0.011897999999999966,
+        "redis write secondary": 0.0045349999999999835,
+        "postgres read primary": 0.005960843373493996,
+        "redis read secondary": 0.006058715197547513
+      },
+      "parity": {
+        "match": 0.0
+      },
+      "secondary_failures": 0.0,
+      "shadow_dropped": 0.0
+    },
+    {
+      "name": "P3 split 30%",
+      "mode": "write=Dual(postgres\u2192redis) read=Split(postgres, redis, 30%)",
+      "start": 1792239543.0583289,
+      "end": 1792239573.058512,
+      "seconds": 30,
+      "propagation_ms": 320.94729999880656,
+      "rps": {
+        "/readyz": 0.0,
+        "/v1/events": 200.0399920015997,
+        "/v1/decisions": 400.0799840031994,
+        "/admin/storage-mode": 0.0
+      },
+      "non2xx": 0.0,
+      "http_p0.5": {
+        "/v1/events": 0.0035447342357213603,
+        "/v1/decisions": 0.001452141382868937
+      },
+      "storage_p0.5": {
+        "redis write secondary": 0.0007899744720352749,
+        "postgres read primary": 0.001508018483283501,
+        "redis read secondary": 0.0007383400926998841,
+        "postgres write primary": 0.0024449413079932923
+      },
+      "http_p0.99": {
+        "/v1/events": 0.007321240601503761,
+        "/v1/decisions": 0.003112727272727265
+      },
+      "storage_p0.99": {
+        "postgres write primary": 0.004999913978494624,
+        "redis write secondary": 0.0019756164383561642,
+        "postgres read primary": 0.0028998669623059854,
+        "redis read secondary": 0.001955793871866295
+      },
+      "parity": {
+        "match": 0.0
+      },
+      "secondary_failures": 0.0,
+      "shadow_dropped": 0.0
+    },
+    {
+      "name": "P3 split 70%",
+      "mode": "write=Dual(postgres\u2192redis) read=Split(postgres, redis, 70%)",
+      "start": 1792239573.3250158,
+      "end": 1792239603.3256621,
+      "seconds": 30,
+      "propagation_ms": 262.6492000017606,
+      "rps": {
+        "/readyz": 0.0,
+        "/v1/events": 200.07198272414618,
+        "/v1/decisions": 399.9840038390786,
+        "/admin/storage-mode": 0.0
+      },
+      "non2xx": 0.0,
+      "http_p0.5": {
+        "/v1/decisions": 0.0009704545454545454,
+        "/v1/events": 0.0035973003374578177
+      },
+      "storage_p0.5": {
+        "postgres write primary": 0.002484957020057307,
+        "redis write secondary": 0.0007813066123188407,
+        "postgres read primary": 0.0014936413184531534,
+        "redis read secondary": 0.0007044331170837194
+      },
+      "http_p0.99": {
+        "/v1/events": 0.19541735537190147,
+        "/v1/decisions": 0.028163636363636346
+      },
+      "storage_p0.99": {
+        "postgres write primary": 0.19275847457627138,
+        "redis write secondary": 0.006245312500000044,
+        "postgres read primary": 0.07489285714285679,
+        "redis read secondary": 0.001979532710280372
+      },
+      "parity": {
+        "match": 0.0
+      },
+      "secondary_failures": 0.0,
+      "shadow_dropped": 0.0
+    },
+    {
+      "name": "ROLLBACK to postgres reads",
+      "mode": "write=Dual(postgres\u2192redis) read=Single(postgres)",
+      "start": 1792239603.6622508,
+      "end": 1792239633.6629357,
+      "seconds": 30,
+      "propagation_ms": 333.0332000005001,
+      "rps": {
+        "/readyz": 0.0,
+        "/v1/events": 200.0079955225074,
+        "/v1/decisions": 399.9760134324778,
+        "/admin/storage-mode": 0.0
+      },
+      "non2xx": 0.0,
+      "http_p0.5": {
+        "/v1/decisions": 0.0015170490093847759,
+        "/v1/events": 0.003445137976346912
+      },
+      "storage_p0.5": {
+        "redis write secondary": 0.0007811937949640288,
+        "postgres read primary": 0.0014739205713667353,
+        "postgres write primary": 0.002389997303855487
+      },
+      "http_p0.99": {
+        "/v1/events": 0.008387500000000084,
+        "/v1/decisions": 0.0028825732899022795
+      },
+      "storage_p0.99": {
+        "postgres write primary": 0.0065970000000000195,
+        "redis write secondary": 0.001958197343453512,
+        "postgres read primary": 0.002393750000000002
+      },
+      "parity": {
+        "match": 0.0
+      },
+      "secondary_failures": 0.0,
+      "shadow_dropped": 0.0
+    },
+    {
+      "name": "P3 split 70% (again)",
+      "mode": "write=Dual(postgres\u2192redis) read=Split(postgres, redis, 70%)",
+      "start": 1792239633.9534936,
+      "end": 1792239663.9543376,
+      "seconds": 30,
+      "propagation_ms": 283.86889999819687,
+      "rps": {
+        "/readyz": 0.0,
+        "/v1/events": 199.96800511918093,
+        "/v1/decisions": 400.01599744040954,
+        "/admin/storage-mode": 0.0
+      },
+      "non2xx": 0.0,
+      "http_p0.5": {
+        "/v1/decisions": 0.0012106399685904987,
+        "/v1/events": 0.003680952380952381
+      },
+      "storage_p0.5": {
+        "postgres write primary": 0.002578702216511404,
+        "redis write secondary": 0.0008350134408602151,
+        "postgres read primary": 0.0015461517392495207,
+        "redis read secondary": 0.0007634198364735159
+      },
+      "http_p0.99": {
+        "/v1/decisions": 0.0031374712643678143,
+        "/v1/events": 0.01176470588235296
+      },
+      "storage_p0.99": {
+        "redis read secondary": 0.0019993057607090095,
+        "postgres write primary": 0.009582291666666643,
+        "redis write secondary": 0.0019983591836734696,
+        "postgres read primary": 0.0029685080645161285
+      },
+      "parity": {
+        "match": 0.0
+      },
+      "secondary_failures": 0.0,
+      "shadow_dropped": 0.0
+    },
+    {
+      "name": "P3 split 100%",
+      "mode": "write=Dual(postgres\u2192redis) read=Split(postgres, redis, 100%)",
+      "start": 1792239664.2387881,
+      "end": 1792239694.2393312,
+      "seconds": 30,
+      "propagation_ms": 279.45469999758643,
+      "rps": {
+        "/readyz": 0.0,
+        "/v1/events": 200.02400288034565,
+        "/v1/decisions": 400.0080009601152,
+        "/admin/storage-mode": 0.0
+      },
+      "non2xx": 0.0,
+      "http_p0.5": {
+        "/v1/events": 0.0030209995800083997,
+        "/v1/decisions": 0.0007592501368363437
+      },
+      "storage_p0.5": {
+        "postgres write primary": 0.002353828954723309,
+        "redis write secondary": 0.000757034059657288,
+        "redis read secondary": 0.0006282426447326796
+      },
+      "http_p0.99": {
+        "/v1/events": 0.011538461538461628,
+        "/v1/decisions": 0.0028622413793103385
+      },
+      "storage_p0.99": {
+        "postgres write primary": 0.0070833333333333685,
+        "redis write secondary": 0.0019683544303797477,
+        "redis read secondary": 0.0023915217391304363
+      },
+      "parity": {
+        "match": 0.0
+      },
+      "secondary_failures": 0.0,
+      "shadow_dropped": 0.0
+    },
+    {
+      "name": "P4 redis primary, pg dual",
+      "mode": "write=Dual(redis\u2192postgres) read=Single(redis)",
+      "start": 1792239694.5712233,
+      "end": 1792239754.5714095,
+      "seconds": 60,
+      "propagation_ms": 290.69410000010976,
+      "rps": {
+        "/readyz": 0.0,
+        "/v1/events": 200.01454386794168,
+        "/v1/decisions": 400.02908773588337,
+        "/admin/storage-mode": 0.0
+      },
+      "non2xx": 0.0,
+      "http_p0.5": {
+        "/v1/events": 0.0034158936301793446,
+        "/v1/decisions": 0.0008001840080294413
+      },
+      "storage_p0.5": {
+        "postgres write secondary": 0.002409253547193091,
+        "redis read primary": 0.0007325648581498816,
+        "redis write primary": 0.0007747788500201045
+      },
+      "http_p0.99": {
+        "/v1/events": 0.014442857142857236,
+        "/v1/decisions": 0.0019928481186487234
+      },
+      "storage_p0.99": {
+        "redis write primary": 0.001962941798941801,
+        "postgres write secondary": 0.012011688311688428,
+        "redis read primary": 0.0019501308411214978
+      },
+      "parity": {
+        "match": 0.0
+      },
+      "secondary_failures": 0.0,
+      "shadow_dropped": 0.0
+    },
+    {
+      "name": "P5 redis only",
+      "mode": "write=Single(redis) read=Single(redis)",
+      "start": 1792239754.8666925,
+      "end": 1792239814.8674264,
+      "seconds": 60,
+      "propagation_ms": 292.21010000037495,
+      "rps": {
+        "/readyz": 0.0,
+        "/v1/events": 200.01090770265603,
+        "/v1/decisions": 400.02181540531205,
+        "/admin/storage-mode": 0.0
+      },
+      "non2xx": 0.0,
+      "http_p0.5": {
+        "/v1/events": 0.0007784431685957031,
+        "/v1/decisions": 0.0006650260360938727
+      },
+      "storage_p0.5": {
+        "redis read primary": 0.0005259089205397301,
+        "redis write primary": 0.000740791701947502
+      },
+      "http_p0.99": {
+        "/v1/events": 0.0027669767441860266,
+        "/v1/decisions": 0.00275621621621622
+      },
+      "storage_p0.99": {
+        "redis read primary": 0.0021993333333333123,
+        "redis write primary": 0.0021938888888888637
+      },
+      "parity": {
+        "match": 0.0
+      },
+      "secondary_failures": 0.0,
+      "shadow_dropped": 0.0
+    }
+  ],
+  "final_parity": {
+    "match": 36491,
+    "mismatch": 0,
+    "race": 0,
+    "error": 0,
+    "dropped": 0,
+    "mismatchRate": 0,
+    "lastMismatch": null
+  }
+}

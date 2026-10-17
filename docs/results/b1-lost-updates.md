@@ -2,7 +2,7 @@
 
 - **Date:** 2026-10-17
 - **Command:** `dotnet run -c Release --project experiments/CounterShift.Experiments -- lost-updates`
-- **Machine:** development laptop, 14 logical CPUs, Windows 11 (10.0.26100), .NET 10.0.12, PostgreSQL 17 in Docker Desktop (WSL2, 7.2 GB). These are *development* numbers; the final report re-runs on the home server.
+- **Machine:** Intel Core Ultra 5 225H (14 logical CPUs), Windows 11, Docker Desktop on WSL2, .NET 10.0.12, PostgreSQL 17 in a container.
 
 ## 50 concurrent writers × 1000 increments on ONE bucket (expected 50,000)
 

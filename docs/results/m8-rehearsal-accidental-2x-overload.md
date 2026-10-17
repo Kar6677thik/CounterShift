@@ -4,7 +4,7 @@
 > previous (crashed) run was still sending the same load, so the system actually received about **400 + 800 req/s**,
 > the ~1,200 req/s ceiling found by the capacity probe. The Prometheus request rates show it; the rates halve
 > in P4/P5 when the orphan's run ended. The numbers below are therefore an **overload** test, not the intended
-> rehearsal. See the clean run and learning note 08. Kept because overload behaviour is worth studying.
+> rehearsal. See [the clean run](m8-rehearsal-local.md). Kept because the overload behaviour is informative.
 
 - Machine: Windows-11-10.0.26100-SP0, 14 logical CPUs (API, PostgreSQL, Redis, Prometheus and k6 all on this one machine)
 - Load: 200 events/s + 400 decisions/s, open model (k6 constant arrival rate), 30% of traffic on 1% of cards

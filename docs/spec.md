@@ -383,6 +383,8 @@ Grab's post does not say how history reached the new store. We have to decide, b
 
 ## 11. Deployment
 
+> **Superseded by [ADR 0015](adr/0015-publish-images-no-deploy.md):** CI publishes the container image to GHCR and the stack runs from it with Docker Compose; there is no hosted deployment. The plan below is kept for reference.
+
 ### 11.1 Target (verified, read-only)
 A single-node **k3s** cluster on the home server. There is **no Docker on the host**. Other workloads (Slate) run in their own namespaces, and we must not affect them. About 4.9 GB of RAM is free.
 
