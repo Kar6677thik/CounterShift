@@ -1,0 +1,4 @@
+# Normalise line endings in the repo to LF; Windows checkouts may convert locally.
+* text=auto eol=lf
+*.{cmd,bat,ps1} text eol=crlf
+*.png binary

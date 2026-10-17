@@ -1,0 +1,25 @@
+# Local development dependencies. Start with:
+#   docker compose -f deploy/compose/docker-compose.yml up -d
+# Redis, Prometheus and Grafana join this file in later milestones (M5, M7).
+name: countershift
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: countershift
+      POSTGRES_PASSWORD: countershift   # local-only; real secrets come from GitHub/K8s (spec §11.4)
+      POSTGRES_DB: countershift
+    ports:
+      # 55432 on the host avoids clashing with any Postgres you already run on 5432.
+      - "55432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U countershift -d countershift"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:

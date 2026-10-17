@@ -125,6 +125,8 @@ Counter key format: `{counterName}:{entityValue}`, for example `payment_failed_b
 
 ### 4.4 Window decomposition (the core algorithm)
 
+> **Refined by [ADR 0002](adr/0002-granularities-and-rounding.md):** the start edge rounds to the finest tier *still retained at that age* (1m only within 3 h, otherwise 15m), and buckets may extend past `now`, so the greedy step takes the coarsest tier aligned at the cursor. ADR 0002 is authoritative where it differs from the steps below.
+
 Given a window `[start, end)` and the configured granularities from coarse to fine, cover the range with the **fewest buckets**:
 
 1. Round `start` *down* to the finest granularity (outward rounding, as in §4.3).
@@ -181,7 +183,7 @@ HTTP clients retry, and a retried event would be counted twice. We **do not dedu
 
 | Method and path | Purpose | Success |
 |---|---|---|
-| `POST /v1/events` | Ingest one event | `202` with `{ counterKeysUpdated: [...] }` |
+| `POST /v1/events` | Ingest one event | `200` with `{ counterKeysUpdated: [...] }` (counts are committed before the reply; `202` would promise later processing) |
 | `POST /v1/decisions` | Evaluate rules for an action | `200` (see below) |
 | `GET /v1/counters/{counter}/{entity}?window=PT90M` | Debugging and teaching: count plus the buckets used | `200` |
 | `GET /healthz` | Liveness: the process is up | `200` |
@@ -421,8 +423,9 @@ CounterShift/
 ├─ tests/
 │  ├─ CounterShift.Domain.Tests/    # unit + property tests
 │  ├─ CounterShift.Storage.Tests/   # contract tests via Testcontainers, facade tests with mocks
-│  ├─ CounterShift.Api.Tests/       # WebApplicationFactory end-to-end
-│  └─ CounterShift.Experiments/     # B1/B4/B5 harnesses (not run in CI by default)
+│  └─ CounterShift.Api.Tests/       # WebApplicationFactory end-to-end
+├─ experiments/
+│  └─ CounterShift.Experiments/     # B1/B4/B5 harnesses: console app printing measurements (not a CI test)
 ├─ load/                            # k6 scripts + event generator (skewed / hot keys)
 ├─ deploy/
 │  ├─ compose/                      # local docker-compose + prometheus/grafana config
@@ -434,6 +437,7 @@ CounterShift/
    ├─ learning/                     # one note per milestone (the "journal")
    ├─ runbooks/                     # migration.md, rollback.md, deploy.md, secrets-setup.md
    ├─ glossary.md
+   ├─ results/                      # raw experiment outputs, dated, with machine specs
    └─ report.md                     # final numbers
 ```
 

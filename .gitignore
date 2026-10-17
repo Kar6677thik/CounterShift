@@ -485,3 +485,4 @@ $RECYCLE.BIN/
 .env
 *.local.json
 load/results/
+TestResults/

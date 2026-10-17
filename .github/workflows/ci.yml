@@ -1,0 +1,44 @@
+# Continuous integration: every push and pull request must build and pass all tests.
+# Integration tests use Testcontainers, which needs Docker; GitHub-hosted Ubuntu runners have it.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read   # least privilege: CI only needs to read the code
+
+concurrency:
+  # A newer push to the same branch cancels the older, now-irrelevant run.
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json   # same SDK as local dev
+
+      - name: Restore
+        run: dotnet restore CounterShift.slnx
+
+      - name: Build
+        run: dotnet build CounterShift.slnx -c Release --no-restore
+
+      - name: Test
+        run: dotnet test --solution CounterShift.slnx -c Release --no-build --report-xunit-trx --results-directory TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results
+          path: TestResults/
